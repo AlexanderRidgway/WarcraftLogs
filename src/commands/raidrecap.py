@@ -38,7 +38,8 @@ async def raidrecap(interaction: discord.Interaction, log_url: str):
         parse = entry.get("rankPercent", 0)
         spec_key = f"{class_name}:{spec}"
         profile = bot.config.get_spec(spec_key)
-        score = score_player(profile, parse, {}) if profile else parse
+        _fallback = {"utility_weight": 0.0, "parse_weight": 1.0, "contributions": []}
+        score = score_player(profile or _fallback, parse, {})
         scored.append((name, spec, score, parse))
 
     scored.sort(key=lambda x: x[2], reverse=True)
@@ -67,7 +68,7 @@ def _extract_report_code(url: str) -> str | None:
     if "reports" in parts:
         idx = parts.index("reports")
         if idx + 1 < len(parts):
-            code = parts[idx + 1]
+            code = parts[idx + 1].split("#")[0].split("?")[0]
             if code.isalnum() and len(code) >= 8:
                 return code
     return None

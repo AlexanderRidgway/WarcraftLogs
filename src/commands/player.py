@@ -36,7 +36,8 @@ async def player_cmd(interaction: discord.Interaction, character: str):
         return
 
     spec = rankings[0].get("spec", "Unknown")
-    spec_key = f"unknown:{spec.lower()}"
+    class_name = rankings[0].get("class", "").lower()
+    spec_key = f"{class_name}:{spec.lower()}"
     profile = bot.config.get_spec(spec_key)
 
     embed = discord.Embed(
@@ -49,10 +50,9 @@ async def player_cmd(interaction: discord.Interaction, character: str):
     for ranking in rankings:
         boss = ranking["encounter"]["name"]
         parse = ranking.get("rankPercent", 0)
-        if profile:
-            score = score_player(profile, parse, {})
-        else:
-            score = parse
+        _fallback = {"utility_weight": 0.0, "parse_weight": 1.0, "contributions": []}
+        active_profile = profile or _fallback
+        score = score_player(active_profile, parse, {})
         boss_scores.append(score)
         parse_label = _parse_color(parse)
         boss_lines.append(f"{boss}: parse {parse_label} | score **{score:.1f}**")

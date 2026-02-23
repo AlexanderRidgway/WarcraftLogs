@@ -38,13 +38,12 @@ async def topconsistent(interaction: discord.Interaction, weeks: int = 4):
         spec_key = f"{class_name}:{spec}"
         profile = bot.config.get_spec(spec_key)
 
+        _fallback_profile = {"utility_weight": 0.0, "parse_weight": 1.0, "contributions": []}
         boss_scores = []
-        for ranking in rankings[-weeks * 8:]:
+        for ranking in rankings:
             parse = ranking.get("rankPercent", 0)
-            if profile:
-                boss_scores.append(score_player(profile, parse, {}))
-            else:
-                boss_scores.append(parse)
+            active_profile = profile or _fallback_profile
+            boss_scores.append(score_player(active_profile, parse, {}))
 
         if boss_scores:
             scores.append((name, score_consistency(boss_scores)))
