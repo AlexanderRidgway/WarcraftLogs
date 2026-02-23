@@ -45,3 +45,57 @@ class WarcraftLogsClient:
             ) as resp:
                 resp.raise_for_status()
                 return await resp.json()
+
+    async def get_guild_roster(self, guild_name: str, server_slug: str, region: str) -> list:
+        """Fetch all members of a guild from WarcraftLogs."""
+        gql = """
+        query($name: String!, $serverSlug: String!, $serverRegion: String!) {
+          guildData {
+            guild(name: $name, serverSlug: $serverSlug, serverRegion: $serverRegion) {
+              members {
+                data {
+                  name
+                  classID
+                  server { slug region { slug } }
+                }
+              }
+            }
+          }
+        }
+        """
+        result = await self.query(gql, {
+            "name": guild_name,
+            "serverSlug": server_slug,
+            "serverRegion": region,
+        })
+        return result["data"]["guildData"]["guild"]["members"]["data"]
+
+    async def get_character_rankings(
+        self, name: str, server_slug: str, region: str, zone_id: int
+    ) -> list:
+        """Fetch parse percentile rankings per boss for a character."""
+        gql = """
+        query($name: String!, $serverSlug: String!, $serverRegion: String!, $zoneID: Int!) {
+          characterData {
+            character(name: $name, serverSlug: $serverSlug, serverRegion: $serverRegion) {
+              zoneRankings(zoneID: $zoneID) {
+                rankings {
+                  encounter { name }
+                  rankPercent
+                  spec
+                }
+              }
+            }
+          }
+        }
+        """
+        result = await self.query(gql, {
+            "name": name,
+            "serverSlug": server_slug,
+            "serverRegion": region,
+            "zoneID": zone_id,
+        })
+        char = result["data"]["characterData"]["character"]
+        if char is None:
+            return []
+        return char["zoneRankings"]["rankings"]

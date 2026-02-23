@@ -45,3 +45,68 @@ async def test_expired_token_triggers_refetch():
         token = await client._get_token()
 
     assert token == "new_token"
+
+
+@pytest.mark.asyncio
+async def test_get_guild_roster():
+    client = WarcraftLogsClient(client_id="id", client_secret="secret")
+    client._token = "mock_token"
+    client._token_expiry = float("inf")
+
+    mock_response_data = {
+        "data": {
+            "guildData": {
+                "guild": {
+                    "members": {
+                        "data": [
+                            {
+                                "name": "Thrallbro",
+                                "classID": 1,
+                                "server": {"slug": "stormrage", "region": {"slug": "us"}},
+                            }
+                        ]
+                    }
+                }
+            }
+        }
+    }
+
+    with patch.object(client, "query", return_value=mock_response_data):
+        roster = await client.get_guild_roster("TestGuild", "stormrage", "US")
+
+    assert len(roster) == 1
+    assert roster[0]["name"] == "Thrallbro"
+
+
+@pytest.mark.asyncio
+async def test_get_character_rankings():
+    client = WarcraftLogsClient(client_id="id", client_secret="secret")
+    client._token = "mock_token"
+    client._token_expiry = float("inf")
+
+    mock_response_data = {
+        "data": {
+            "characterData": {
+                "character": {
+                    "zoneRankings": {
+                        "rankings": [
+                            {
+                                "encounter": {"name": "Gruul the Dragonkiller"},
+                                "rankPercent": 87.5,
+                                "spec": "Protection",
+                            }
+                        ]
+                    }
+                }
+            }
+        }
+    }
+
+    with patch.object(client, "query", return_value=mock_response_data):
+        rankings = await client.get_character_rankings(
+            "Thrallbro", "stormrage", "US", zone_id=1007
+        )
+
+    assert len(rankings) == 1
+    assert rankings[0]["rankPercent"] == 87.5
+    assert rankings[0]["encounter"]["name"] == "Gruul the Dragonkiller"
