@@ -1,0 +1,79 @@
+# Class:Spec profiles for scoring raiders.
+# utility_weight + parse_weight must equal 1.0
+# metric types: "uptime" (% of fight) or "count" (number of casts)
+# spell_id: the WarcraftLogs spell ID for querying cast/uptime data
+
+warrior:protection:
+  utility_weight: 0.75
+  parse_weight: 0.25
+  contributions:
+    - metric: sunder_armor_uptime
+      label: "Sunder Armor"
+      spell_id: 7386
+      type: uptime
+      target: 90
+    - metric: demoralizing_shout_uptime
+      label: "Demo Shout"
+      spell_id: 1160
+      type: uptime
+      target: 85
+    - metric: thunderclap_count
+      label: "Thunderclap"
+      spell_id: 6343
+      type: count
+      target: 15
+
+warrior:fury:
+  utility_weight: 0.40
+  parse_weight: 0.60
+  contributions:
+    - metric: battle_shout_uptime
+      label: "Battle Shout"
+      spell_id: 6673
+      type: uptime
+      target: 95
+    - metric: demoralizing_shout_uptime
+      label: "Demo Shout"
+      spell_id: 1160
+      type: uptime
+      target: 75
+
+rogue:combat:
+  utility_weight: 0.55
+  parse_weight: 0.45
+  contributions:
+    - metric: expose_armor_uptime
+      label: "Expose Armor"
+      spell_id: 8647
+      type: uptime
+      target: 85
+
+druid:feral:
+  utility_weight: 0.60
+  parse_weight: 0.40
+  contributions:
+    - metric: faerie_fire_uptime
+      label: "Faerie Fire"
+      spell_id: 16857
+      type: uptime
+      target: 90
+
+mage:arcane:
+  utility_weight: 0.20
+  parse_weight: 0.80
+  contributions:
+    - metric: amplify_curse_uptime
+      label: "Amplify Curse"
+      spell_id: 12579
+      type: uptime
+      target: 60
+
+warlock:affliction:
+  utility_weight: 0.45
+  parse_weight: 0.55
+  contributions:
+    - metric: curse_of_elements_uptime
+      label: "Curse of Elements"
+      spell_id: 1490
+      type: uptime
+      target: 90
