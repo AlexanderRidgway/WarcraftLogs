@@ -15,6 +15,9 @@ def score_player(spec_profile: dict, parse_percentile: float, utility_data: dict
     contributions = spec_profile["contributions"]
 
     if not contributions:
+        # No utility metrics configured — parse is the entire score.
+        # parse_weight is intentionally ignored: when there is nothing to
+        # measure for utility, the player is judged solely on parse performance.
         return float(parse_percentile)
 
     metric_scores = []

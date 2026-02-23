@@ -48,10 +48,23 @@ def test_consistency_empty_returns_zero():
 
 
 def test_no_contributions_returns_parse():
+    # parse_weight is intentionally ignored when contributions is empty —
+    # the raw parse is the entire score regardless of configured weights
     no_utility_profile = {
         "utility_weight": 0.0,
         "parse_weight": 1.0,
         "contributions": [],
     }
     result = score_player(no_utility_profile, parse_percentile=75, utility_data={})
+    assert result == pytest.approx(75.0, abs=0.1)
+
+
+def test_no_contributions_ignores_parse_weight():
+    # Same parse, different parse_weight — result must be identical (parse_weight ignored)
+    profile_low_weight = {
+        "utility_weight": 0.75,
+        "parse_weight": 0.25,
+        "contributions": [],
+    }
+    result = score_player(profile_low_weight, parse_percentile=75, utility_data={})
     assert result == pytest.approx(75.0, abs=0.1)
