@@ -14,7 +14,7 @@ warrior:protection:
       target: 90
     - metric: demoralizing_shout_uptime
       label: "Demo Shout"
-      spell_id: 1160
+      spell_id: 25203
       type: uptime
       target: 85
     - metric: thunderclap_count
@@ -34,7 +34,7 @@ warrior:fury:
       target: 95
     - metric: demoralizing_shout_uptime
       label: "Demo Shout"
-      spell_id: 1160
+      spell_id: 25203
       type: uptime
       target: 75
 
@@ -62,11 +62,11 @@ mage:arcane:
   utility_weight: 0.20
   parse_weight: 0.80
   contributions:
-    - metric: amplify_curse_uptime
-      label: "Amplify Curse"
-      spell_id: 12579
-      type: uptime
-      target: 60
+    - metric: decurse_count
+      label: "Remove Curse"
+      spell_id: 475
+      type: count
+      target: 5
 
 warlock:affliction:
   utility_weight: 0.45
@@ -74,6 +74,6 @@ warlock:affliction:
   contributions:
     - metric: curse_of_elements_uptime
       label: "Curse of Elements"
-      spell_id: 1490
+      spell_id: 27228
       type: uptime
       target: 90
