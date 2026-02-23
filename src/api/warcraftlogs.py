@@ -99,3 +99,62 @@ class WarcraftLogsClient:
         if char is None:
             return []
         return char["zoneRankings"]["rankings"]
+
+    async def get_utility_data(
+        self,
+        report_code: str,
+        source_id: int,
+        start: int,
+        end: int,
+        contributions: list,
+    ) -> dict:
+        """
+        Fetch utility metrics (uptime % and cast counts) for a player in a report.
+
+        Returns a dict of metric_name -> value.
+        """
+        uptime_contribs = [c for c in contributions if c["type"] == "uptime"]
+        count_contribs = [c for c in contributions if c["type"] == "count"]
+
+        result = {}
+
+        if uptime_contribs:
+            uptime_data = await self._query_table(report_code, source_id, start, end, "Debuffs")
+            auras = uptime_data.get("auras", [])
+            total_time = uptime_data.get("totalTime", 1)
+            for contrib in uptime_contribs:
+                match = next((a for a in auras if a["id"] == contrib["spell_id"]), None)
+                if match:
+                    result[contrib["metric"]] = (match["totalUptime"] / total_time) * 100
+                else:
+                    result[contrib["metric"]] = 0.0
+
+        if count_contribs:
+            cast_data = await self._query_table(report_code, source_id, start, end, "Casts")
+            entries = cast_data.get("entries", [])
+            for contrib in count_contribs:
+                match = next((e for e in entries if e["id"] == contrib["spell_id"]), None)
+                result[contrib["metric"]] = match["total"] if match else 0
+
+        return result
+
+    async def _query_table(
+        self, report_code: str, source_id: int, start: int, end: int, data_type: str
+    ) -> dict:
+        gql = """
+        query($code: String!, $sourceID: Int, $startTime: Float!, $endTime: Float!, $dataType: TableDataType!) {
+          reportData {
+            report(code: $code) {
+              table(sourceID: $sourceID, startTime: $startTime, endTime: $endTime, dataType: $dataType)
+            }
+          }
+        }
+        """
+        result = await self.query(gql, {
+            "code": report_code,
+            "sourceID": source_id,
+            "startTime": float(start),
+            "endTime": float(end),
+            "dataType": data_type,
+        })
+        return result["data"]["reportData"]["report"]["table"]["data"]

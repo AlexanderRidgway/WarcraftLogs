@@ -110,3 +110,62 @@ async def test_get_character_rankings():
     assert len(rankings) == 1
     assert rankings[0]["rankPercent"] == 87.5
     assert rankings[0]["encounter"]["name"] == "Gruul the Dragonkiller"
+
+
+@pytest.mark.asyncio
+async def test_get_report_utility_data():
+    client = WarcraftLogsClient(client_id="id", client_secret="secret")
+    client._token = "mock_token"
+    client._token_expiry = float("inf")
+
+    mock_uptime_response = {
+        "data": {
+            "reportData": {
+                "report": {
+                    "table": {
+                        "data": {
+                            "auras": [
+                                {"name": "Sunder Armor", "id": 7386, "totalUptime": 85000, "type": "debuff"},
+                            ],
+                            "totalTime": 100000,
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    mock_cast_response = {
+        "data": {
+            "reportData": {
+                "report": {
+                    "table": {
+                        "data": {
+                            "entries": [
+                                {"name": "Thunderclap", "id": 6343, "total": 12},
+                            ]
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    contributions = [
+        {"spell_id": 7386, "metric": "sunder_armor_uptime", "type": "uptime"},
+        {"spell_id": 6343, "metric": "thunderclap_count", "type": "count"},
+    ]
+
+    call_count = 0
+    async def mock_query(gql, variables=None):
+        nonlocal call_count
+        call_count += 1
+        if call_count == 1:
+            return mock_uptime_response
+        return mock_cast_response
+
+    client.query = mock_query
+    result = await client.get_utility_data("abc123", source_id=5, start=0, end=100000, contributions=contributions)
+
+    assert result["sunder_armor_uptime"] == pytest.approx(85.0, abs=0.1)
+    assert result["thunderclap_count"] == 12
