@@ -35,4 +35,4 @@ class ConfigLoader:
 
     def _save(self) -> None:
         with open(self._path, "w") as f:
-            yaml.dump(self._data, f, default_flow_style=False)
+            yaml.dump(self._data, f, default_flow_style=False, sort_keys=False)

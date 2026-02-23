@@ -1,6 +1,5 @@
 import pytest
 import yaml
-import os
 from src.config.loader import ConfigLoader
 
 SAMPLE_CONFIG = {
