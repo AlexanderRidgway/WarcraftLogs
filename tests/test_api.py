@@ -71,7 +71,7 @@ async def test_get_guild_roster():
         }
     }
 
-    with patch.object(client, "query", return_value=mock_response_data):
+    with patch.object(client, "query", new_callable=AsyncMock, return_value=mock_response_data):
         roster = await client.get_guild_roster("TestGuild", "stormrage", "US")
 
     assert len(roster) == 1
@@ -102,7 +102,7 @@ async def test_get_character_rankings():
         }
     }
 
-    with patch.object(client, "query", return_value=mock_response_data):
+    with patch.object(client, "query", new_callable=AsyncMock, return_value=mock_response_data):
         rankings = await client.get_character_rankings(
             "Thrallbro", "stormrage", "US", zone_id=1007
         )
@@ -169,3 +169,4 @@ async def test_get_report_utility_data():
 
     assert result["sunder_armor_uptime"] == pytest.approx(85.0, abs=0.1)
     assert result["thunderclap_count"] == 12
+    assert call_count == 2

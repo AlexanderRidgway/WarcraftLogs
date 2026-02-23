@@ -68,7 +68,10 @@ class WarcraftLogsClient:
             "serverSlug": server_slug,
             "serverRegion": region,
         })
-        return result["data"]["guildData"]["guild"]["members"]["data"]
+        guild = result["data"]["guildData"]["guild"]
+        if guild is None:
+            return []
+        return guild["members"]["data"]
 
     async def get_character_rankings(
         self, name: str, server_slug: str, region: str, zone_id: int
@@ -98,7 +101,10 @@ class WarcraftLogsClient:
         char = result["data"]["characterData"]["character"]
         if char is None:
             return []
-        return char["zoneRankings"]["rankings"]
+        zone = char.get("zoneRankings")
+        if zone is None:
+            return []
+        return zone["rankings"]
 
     async def get_utility_data(
         self,
@@ -119,11 +125,25 @@ class WarcraftLogsClient:
         result = {}
 
         if uptime_contribs:
-            uptime_data = await self._query_table(report_code, source_id, start, end, "Debuffs")
-            auras = uptime_data.get("auras", [])
-            total_time = uptime_data.get("totalTime", 1)
+            debuff_contribs = [c for c in uptime_contribs if c.get("subtype") != "buff"]
+            buff_contribs = [c for c in uptime_contribs if c.get("subtype") == "buff"]
+
+            all_auras: list[dict] = []
+            total_time = 1
+
+            if debuff_contribs:
+                debuff_data = await self._query_table(report_code, source_id, start, end, "Debuffs")
+                all_auras += debuff_data.get("auras", [])
+                total_time = debuff_data.get("totalTime", 1)
+
+            if buff_contribs:
+                buff_data = await self._query_table(report_code, source_id, start, end, "Buffs")
+                all_auras += buff_data.get("auras", [])
+                if total_time == 1:
+                    total_time = buff_data.get("totalTime", 1)
+
             for contrib in uptime_contribs:
-                match = next((a for a in auras if a["id"] == contrib["spell_id"]), None)
+                match = next((a for a in all_auras if a["id"] == contrib["spell_id"]), None)
                 if match:
                     result[contrib["metric"]] = (match["totalUptime"] / total_time) * 100
                 else:
@@ -157,4 +177,10 @@ class WarcraftLogsClient:
             "endTime": float(end),
             "dataType": data_type,
         })
-        return result["data"]["reportData"]["report"]["table"]["data"]
+        report = result["data"]["reportData"]["report"]
+        if report is None:
+            raise ValueError(f"Report '{report_code}' not found on WarcraftLogs")
+        table = report.get("table")
+        if table is None:
+            raise ValueError(f"Table data unavailable for report '{report_code}' (dataType={data_type})")
+        return table["data"]
