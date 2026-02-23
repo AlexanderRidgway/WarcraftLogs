@@ -13,8 +13,8 @@ PROT_WARRIOR_PROFILE = {
 
 def test_perfect_utility_and_parse():
     utility_data = {"sunder_armor_uptime": 95, "thunderclap_count": 20}
-    result = score_player(PROT_WARRIOR_PROFILE, parse_percentile=80, utility_data=utility_data)
-    assert result == pytest.approx(100.0, abs=1.0)
+    result = score_player(PROT_WARRIOR_PROFILE, parse_percentile=100, utility_data=utility_data)
+    assert result == pytest.approx(100.0, abs=0.1)
 
 
 def test_zero_utility():
@@ -45,3 +45,13 @@ def test_consistency_averages_scores():
 
 def test_consistency_empty_returns_zero():
     assert score_consistency([]) == 0.0
+
+
+def test_no_contributions_returns_parse():
+    no_utility_profile = {
+        "utility_weight": 0.0,
+        "parse_weight": 1.0,
+        "contributions": [],
+    }
+    result = score_player(no_utility_profile, parse_percentile=75, utility_data={})
+    assert result == pytest.approx(75.0, abs=0.1)

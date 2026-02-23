@@ -15,7 +15,7 @@ def score_player(spec_profile: dict, parse_percentile: float, utility_data: dict
     contributions = spec_profile["contributions"]
 
     if not contributions:
-        return parse_percentile * parse_weight
+        return float(parse_percentile)
 
     metric_scores = []
     for contrib in contributions:
@@ -25,8 +25,6 @@ def score_player(spec_profile: dict, parse_percentile: float, utility_data: dict
         metric_scores.append(metric_score)
 
     utility_score = sum(metric_scores) / len(metric_scores)
-    if utility_score >= 100.0:
-        return 100.0
     return (utility_score * utility_weight) + (parse_percentile * parse_weight)
 
 
