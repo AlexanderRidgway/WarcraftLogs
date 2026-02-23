@@ -1,4 +1,6 @@
+import importlib
 import os
+import pathlib
 import discord
 from discord import app_commands
 from dotenv import load_dotenv
@@ -13,6 +15,8 @@ GUILD_SERVER = os.getenv("GUILD_SERVER")
 GUILD_REGION = os.getenv("GUILD_REGION", "US")
 TBC_ZONE_ID = 1007  # The Eye zone — update to current tier as needed
 
+_REPO_ROOT = pathlib.Path(__file__).parent.parent
+
 
 class GuildBot(discord.Client):
     def __init__(self):
@@ -23,10 +27,16 @@ class GuildBot(discord.Client):
             client_id=os.getenv("WARCRAFTLOGS_CLIENT_ID"),
             client_secret=os.getenv("WARCRAFTLOGS_CLIENT_SECRET"),
         )
-        self.config = ConfigLoader("config.yaml")
+        self.config = ConfigLoader(str(_REPO_ROOT / "config.yaml"))
 
     async def setup_hook(self):
-        await self.tree.sync()
+        guild_id = os.getenv("DEV_GUILD_ID")
+        if guild_id:
+            guild = discord.Object(id=int(guild_id))
+            self.tree.copy_global_to(guild=guild)
+            await self.tree.sync(guild=guild)
+        else:
+            await self.tree.sync()
 
     async def on_ready(self):
         print(f"Logged in as {self.user}")
@@ -36,13 +46,21 @@ bot = GuildBot()
 
 
 def is_officer(interaction: discord.Interaction) -> bool:
-    """Check if the user has the officer role."""
-    role_names = [r.name for r in interaction.user.roles]
-    return OFFICER_ROLE_NAME in role_names
+    """Check if the user has the officer role. Returns False in DM context."""
+    member = interaction.user
+    if not hasattr(member, "roles"):
+        return False
+    return OFFICER_ROLE_NAME in [r.name for r in member.roles]
 
 
-# Import commands to register them (must come after bot is defined)
-from src.commands import topconsistent, player, raidrecap, setconfig  # noqa: E402, F401
+# Import command modules to register them with the bot tree.
+# Guards against missing modules during incremental development (Tasks 8-11).
+_COMMAND_MODULES = ["topconsistent", "player", "raidrecap", "setconfig"]
+for _mod in _COMMAND_MODULES:
+    try:
+        importlib.import_module(f"src.commands.{_mod}")
+    except ImportError:
+        pass
 
 
 def run():
