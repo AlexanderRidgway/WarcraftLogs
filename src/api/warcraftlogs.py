@@ -184,3 +184,23 @@ class WarcraftLogsClient:
         if table is None:
             raise ValueError(f"Table data unavailable for report '{report_code}' (dataType={data_type})")
         return table["data"]
+
+    async def get_report_rankings(self, report_code: str) -> list:
+        """Fetch per-player rankings for all fights in a report."""
+        gql = """
+        query($code: String!) {
+          reportData {
+            report(code: $code) {
+              rankings(playerMetric: dps)
+            }
+          }
+        }
+        """
+        result = await self.query(gql, {"code": report_code})
+        report = result["data"]["reportData"]["report"]
+        if report is None:
+            return []
+        rankings_data = report.get("rankings", {})
+        if not rankings_data:
+            return []
+        return rankings_data.get("data", [])
