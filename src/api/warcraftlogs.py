@@ -212,3 +212,43 @@ class WarcraftLogsClient:
         if not rankings_data:
             return []
         return rankings_data.get("data", [])
+
+    async def get_report_players(self, report_code: str) -> list:
+        """Return all player actors in a report as [{id, name}]."""
+        gql = """
+        query($code: String!) {
+          reportData {
+            report(code: $code) {
+              masterData {
+                actors { id name type }
+              }
+            }
+          }
+        }
+        """
+        result = await self.query(gql, {"code": report_code})
+        report = result["data"]["reportData"]["report"]
+        if report is None:
+            return []
+        actors = report.get("masterData", {}).get("actors", [])
+        return [{"id": a["id"], "name": a["name"]} for a in actors if a["type"] == "Player"]
+
+    async def get_report_timerange(self, report_code: str) -> dict:
+        """Return {start, end} timestamps (relative to report start) for the full report."""
+        gql = """
+        query($code: String!) {
+          reportData {
+            report(code: $code) {
+              startTime
+              endTime
+            }
+          }
+        }
+        """
+        result = await self.query(gql, {"code": report_code})
+        report = result["data"]["reportData"]["report"]
+        if report is None:
+            return {"start": 0, "end": 0}
+        start = int(report["startTime"])
+        end = int(report["endTime"])
+        return {"start": 0, "end": end - start}

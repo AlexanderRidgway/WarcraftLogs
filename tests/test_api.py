@@ -239,3 +239,58 @@ async def test_get_utility_data_spell_ids_list_no_match_returns_zero():
     client.query = AsyncMock(return_value=mock_response)
     result = await client.get_utility_data("abc", source_id=1, start=0, end=100000, contributions=contributions)
     assert result["flask_uptime"] == 0.0
+
+
+@pytest.mark.asyncio
+async def test_get_report_players():
+    """Returns list of player actors with name and id."""
+    client = WarcraftLogsClient(client_id="id", client_secret="secret")
+    client._token = "mock_token"
+    client._token_expiry = float("inf")
+
+    mock_response = {
+        "data": {
+            "reportData": {
+                "report": {
+                    "masterData": {
+                        "actors": [
+                            {"id": 3, "name": "Thrallbro", "type": "Player"},
+                            {"id": 7, "name": "Healbot", "type": "Player"},
+                            {"id": 12, "name": "Some NPC", "type": "NPC"},
+                        ]
+                    }
+                }
+            }
+        }
+    }
+
+    with patch.object(client, "query", new_callable=AsyncMock, return_value=mock_response):
+        players = await client.get_report_players("abc123")
+
+    assert len(players) == 2
+    assert players[0] == {"id": 3, "name": "Thrallbro"}
+    assert players[1] == {"id": 7, "name": "Healbot"}
+
+
+@pytest.mark.asyncio
+async def test_get_report_timerange():
+    """Returns start and end timestamps for the full report."""
+    client = WarcraftLogsClient(client_id="id", client_secret="secret")
+    client._token = "mock_token"
+    client._token_expiry = float("inf")
+
+    mock_response = {
+        "data": {
+            "reportData": {
+                "report": {
+                    "startTime": 1000000,
+                    "endTime": 1090000,
+                }
+            }
+        }
+    }
+
+    with patch.object(client, "query", new_callable=AsyncMock, return_value=mock_response):
+        timerange = await client.get_report_timerange("abc123")
+
+    assert timerange == {"start": 0, "end": 90000}
