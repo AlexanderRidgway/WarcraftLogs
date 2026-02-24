@@ -1,11 +1,19 @@
 # Class:Spec profiles for scoring raiders.
-# utility_weight + parse_weight must equal 1.0
-# metric types: "uptime" (% of fight) or "count" (number of casts)
-# spell_id: the WarcraftLogs spell ID for querying cast/uptime data
+# utility_weight + parse_weight + consumables_weight must equal 1.0
+# consumables_weight: 0.00 = consumables shown as informational only (never scored)
+# metric types: "uptime" (% of fight) or "count" (number of casts/uses)
+# subtype: "buff" queries WCL Buffs table; omit for Debuffs table
+# spell_id: single WCL spell ID; spell_ids: list of IDs (matches any one)
+# optional: true = shown in display but never included in score
+
+# ──────────────────────────────────────────────
+# WARRIOR
+# ──────────────────────────────────────────────
 
 warrior:protection:
   utility_weight: 0.75
   parse_weight: 0.25
+  consumables_weight: 0.00
   contributions:
     - metric: sunder_armor_uptime
       label: "Sunder Armor"
@@ -26,6 +34,7 @@ warrior:protection:
 warrior:fury:
   utility_weight: 0.40
   parse_weight: 0.60
+  consumables_weight: 0.00
   contributions:
     - metric: battle_shout_uptime
       label: "Battle Shout"
@@ -39,9 +48,96 @@ warrior:fury:
       type: uptime
       target: 75
 
+warrior:arms:
+  utility_weight: 0.30
+  parse_weight: 0.70
+  consumables_weight: 0.00
+  contributions:
+    - metric: battle_shout_uptime
+      label: "Battle Shout"
+      spell_id: 6673
+      type: uptime
+      subtype: buff
+      target: 95
+    - metric: demoralizing_shout_uptime
+      label: "Demo Shout"
+      spell_id: 25203
+      type: uptime
+      target: 75
+
+# ──────────────────────────────────────────────
+# PALADIN
+# ──────────────────────────────────────────────
+
+paladin:holy:
+  utility_weight: 0.50
+  parse_weight: 0.50
+  consumables_weight: 0.00
+  contributions:
+    - metric: cleanse_count
+      label: "Cleanse"
+      spell_id: 4987
+      type: count
+      target: 10
+    - metric: judgement_count
+      label: "Judgement"
+      spell_id: 20271
+      type: count
+      target: 15
+    - metric: devotion_aura_uptime
+      label: "Devotion Aura"
+      spell_id: 10293
+      type: uptime
+      subtype: buff
+      target: 90
+
+paladin:protection:
+  utility_weight: 0.70
+  parse_weight: 0.30
+  consumables_weight: 0.00
+  contributions:
+    - metric: judgement_count
+      label: "Judgement"
+      spell_id: 20271
+      type: count
+      target: 20
+    - metric: blessing_of_kings_uptime
+      label: "Blessing of Kings"
+      spell_id: 20217
+      type: uptime
+      subtype: buff
+      target: 90
+    - metric: cleanse_count
+      label: "Cleanse"
+      spell_id: 4987
+      type: count
+      target: 8
+
+paladin:retribution:
+  utility_weight: 0.35
+  parse_weight: 0.65
+  consumables_weight: 0.00
+  contributions:
+    - metric: judgement_count
+      label: "Judgement"
+      spell_id: 20271
+      type: count
+      target: 20
+    - metric: blessing_of_might_uptime
+      label: "Blessing of Might"
+      spell_id: 25291
+      type: uptime
+      subtype: buff
+      target: 90
+
+# ──────────────────────────────────────────────
+# ROGUE
+# ──────────────────────────────────────────────
+
 rogue:combat:
   utility_weight: 0.55
   parse_weight: 0.45
+  consumables_weight: 0.00
   contributions:
     - metric: expose_armor_uptime
       label: "Expose Armor"
@@ -49,9 +145,119 @@ rogue:combat:
       type: uptime
       target: 85
 
+# ──────────────────────────────────────────────
+# HUNTER
+# ──────────────────────────────────────────────
+
+hunter:beast mastery:
+  utility_weight: 0.20
+  parse_weight: 0.80
+  consumables_weight: 0.00
+  contributions:
+    - metric: misdirection_count
+      label: "Misdirection"
+      spell_id: 34477
+      type: count
+      target: 5
+
+hunter:survival:
+  utility_weight: 0.35
+  parse_weight: 0.65
+  consumables_weight: 0.00
+  contributions:
+    - metric: expose_weakness_uptime
+      label: "Expose Weakness"
+      spell_id: 34503
+      type: uptime
+      target: 50
+    - metric: hunters_mark_uptime
+      label: "Hunter's Mark"
+      spell_id: 14325
+      type: uptime
+      target: 90
+    - metric: misdirection_count
+      label: "Misdirection"
+      spell_id: 34477
+      type: count
+      target: 5
+
+# ──────────────────────────────────────────────
+# SHAMAN
+# ──────────────────────────────────────────────
+
+shaman:restoration:
+  utility_weight: 0.50
+  parse_weight: 0.50
+  consumables_weight: 0.00
+  contributions:
+    - metric: windfury_totem_uptime
+      label: "Windfury Totem"
+      spell_id: 25587
+      type: uptime
+      subtype: buff
+      target: 90
+    - metric: mana_spring_totem_uptime
+      label: "Mana Spring Totem"
+      spell_id: 25570
+      type: uptime
+      subtype: buff
+      target: 90
+    - metric: purge_count
+      label: "Purge"
+      spell_id: 370
+      type: count
+      target: 5
+
+shaman:elemental:
+  utility_weight: 0.40
+  parse_weight: 0.60
+  consumables_weight: 0.00
+  contributions:
+    - metric: totem_of_wrath_uptime
+      label: "Totem of Wrath"
+      spell_id: 30706
+      type: uptime
+      subtype: buff
+      target: 90
+    - metric: wrath_of_air_uptime
+      label: "Wrath of Air Totem"
+      spell_id: 3738
+      type: uptime
+      subtype: buff
+      target: 90
+
+shaman:enhancement:
+  utility_weight: 0.45
+  parse_weight: 0.55
+  consumables_weight: 0.00
+  contributions:
+    - metric: windfury_totem_uptime
+      label: "Windfury Totem"
+      spell_id: 25587
+      type: uptime
+      subtype: buff
+      target: 90
+    - metric: grace_of_air_uptime
+      label: "Grace of Air Totem"
+      spell_id: 25359
+      type: uptime
+      subtype: buff
+      target: 90
+    - metric: strength_of_earth_uptime
+      label: "Strength of Earth Totem"
+      spell_id: 25361
+      type: uptime
+      subtype: buff
+      target: 90
+
+# ──────────────────────────────────────────────
+# DRUID
+# ──────────────────────────────────────────────
+
 druid:feral:
   utility_weight: 0.60
   parse_weight: 0.40
+  consumables_weight: 0.00
   contributions:
     - metric: faerie_fire_uptime
       label: "Faerie Fire"
@@ -59,9 +265,56 @@ druid:feral:
       type: uptime
       target: 90
 
+druid:restoration:
+  utility_weight: 0.45
+  parse_weight: 0.55
+  consumables_weight: 0.00
+  contributions:
+    - metric: innervate_count
+      label: "Innervate"
+      spell_id: 29166
+      type: count
+      target: 2
+    - metric: remove_curse_count
+      label: "Remove Curse"
+      spell_id: 2782
+      type: count
+      target: 5
+    - metric: abolish_poison_count
+      label: "Abolish Poison"
+      spell_id: 2893
+      type: count
+      target: 5
+
+druid:balance:
+  utility_weight: 0.30
+  parse_weight: 0.70
+  consumables_weight: 0.00
+  contributions:
+    - metric: faerie_fire_uptime
+      label: "Faerie Fire"
+      spell_id: 770
+      type: uptime
+      target: 85
+    - metric: innervate_count
+      label: "Innervate"
+      spell_id: 29166
+      type: count
+      target: 2
+    - metric: remove_curse_count
+      label: "Remove Curse"
+      spell_id: 2782
+      type: count
+      target: 5
+
+# ──────────────────────────────────────────────
+# MAGE
+# ──────────────────────────────────────────────
+
 mage:arcane:
   utility_weight: 0.20
   parse_weight: 0.80
+  consumables_weight: 0.00
   contributions:
     - metric: decurse_count
       label: "Remove Curse"
@@ -69,12 +322,198 @@ mage:arcane:
       type: count
       target: 5
 
+mage:fire:
+  utility_weight: 0.25
+  parse_weight: 0.75
+  consumables_weight: 0.00
+  contributions:
+    - metric: decurse_count
+      label: "Remove Curse"
+      spell_id: 475
+      type: count
+      target: 5
+    - metric: fire_vulnerability_uptime
+      label: "Fire Vulnerability (Imp. Scorch)"
+      spell_id: 22959
+      type: uptime
+      target: 80
+
+# ──────────────────────────────────────────────
+# WARLOCK
+# ──────────────────────────────────────────────
+
 warlock:affliction:
   utility_weight: 0.45
   parse_weight: 0.55
+  consumables_weight: 0.00
   contributions:
     - metric: curse_of_elements_uptime
       label: "Curse of Elements"
       spell_id: 27228
       type: uptime
       target: 90
+
+warlock:destruction:
+  utility_weight: 0.30
+  parse_weight: 0.70
+  consumables_weight: 0.00
+  contributions:
+    - metric: curse_of_elements_uptime
+      label: "Curse of Elements"
+      spell_id: 27228
+      type: uptime
+      target: 90
+
+# ──────────────────────────────────────────────
+# PRIEST
+# ──────────────────────────────────────────────
+
+priest:holy:
+  utility_weight: 0.45
+  parse_weight: 0.55
+  consumables_weight: 0.00
+  contributions:
+    - metric: dispel_magic_count
+      label: "Dispel Magic"
+      spell_id: 527
+      type: count
+      target: 10
+    - metric: fortitude_uptime
+      label: "Power Word: Fortitude"
+      spell_id: 25392
+      type: uptime
+      subtype: buff
+      target: 95
+    - metric: abolish_disease_count
+      label: "Abolish Disease"
+      spell_id: 552
+      type: count
+      target: 5
+
+priest:discipline:
+  utility_weight: 0.40
+  parse_weight: 0.60
+  consumables_weight: 0.00
+  contributions:
+    - metric: dispel_magic_count
+      label: "Dispel Magic"
+      spell_id: 527
+      type: count
+      target: 10
+    - metric: fortitude_uptime
+      label: "Power Word: Fortitude"
+      spell_id: 25392
+      type: uptime
+      subtype: buff
+      target: 95
+    - metric: abolish_disease_count
+      label: "Abolish Disease"
+      spell_id: 552
+      type: count
+      target: 5
+
+priest:shadow:
+  utility_weight: 0.35
+  parse_weight: 0.65
+  consumables_weight: 0.00
+  contributions:
+    - metric: shadow_weaving_uptime
+      label: "Shadow Weaving"
+      spell_id: 15258
+      type: uptime
+      target: 85
+    - metric: misery_uptime
+      label: "Misery"
+      spell_id: 33198
+      type: uptime
+      target: 85
+    - metric: vampiric_embrace_uptime
+      label: "Vampiric Embrace"
+      spell_id: 15286
+      type: uptime
+      subtype: buff
+      target: 90
+
+# ──────────────────────────────────────────────
+# GLOBAL CONSUMABLES
+# All specs have consumables_weight: 0.00 by default (informational only).
+# To score consumables for a spec, raise consumables_weight and lower parse_weight
+# by the same amount so all three weights still sum to 1.0.
+# optional: true = shown in display but NEVER included in the score
+# (used for profession-gated items or situational consumables)
+# ──────────────────────────────────────────────
+
+consumables:
+  - metric: flask_uptime
+    label: "Flask"
+    spell_ids: [17628, 17627, 28518, 28520, 28521]
+    type: uptime
+    subtype: buff
+    target: 100
+
+  - metric: battle_elixir_uptime
+    label: "Battle Elixir"
+    spell_ids: [28490, 28491, 28493, 28494, 28497, 17538, 17539, 28543]
+    type: uptime
+    subtype: buff
+    target: 100
+
+  - metric: guardian_elixir_uptime
+    label: "Guardian Elixir"
+    spell_ids: [39625, 39627, 39628, 28502, 28503]
+    type: uptime
+    subtype: buff
+    target: 100
+
+  - metric: haste_potion_count
+    label: "Haste Potion"
+    spell_id: 28507
+    type: count
+    target: 2
+
+  - metric: destruction_potion_count
+    label: "Destruction Potion"
+    spell_id: 28508
+    type: count
+    target: 2
+
+  - metric: mana_potion_count
+    label: "Mana Potion"
+    spell_id: 28499
+    type: count
+    target: 2
+
+  - metric: dark_rune_count
+    label: "Dark Rune"
+    spell_id: 27869
+    type: count
+    target: 2
+    optional: true
+
+  - metric: demonic_rune_count
+    label: "Demonic Rune"
+    spell_id: 12662
+    type: count
+    target: 2
+    optional: true
+
+  - metric: drums_count
+    label: "Drums"
+    spell_ids: [35476, 35475, 35478, 35477]
+    type: count
+    target: 4
+    optional: true
+
+  - metric: sapper_count
+    label: "Goblin Sapper"
+    spell_id: 13241
+    type: count
+    target: 2
+    optional: true
+
+  - metric: grenade_count
+    label: "Grenade / Bomb"
+    spell_ids: [30216, 30217, 19769]
+    type: count
+    target: 3
+    optional: true
