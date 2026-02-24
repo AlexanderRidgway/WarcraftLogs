@@ -67,3 +67,45 @@ def test_all_specs(config_file):
     loader = ConfigLoader(config_file)
     specs = loader.all_specs()
     assert "warrior:protection" in specs
+
+
+SAMPLE_CONFIG_WITH_CONSUMABLES = {
+    **SAMPLE_CONFIG,
+    "consumables": [
+        {
+            "metric": "flask_uptime",
+            "label": "Flask",
+            "spell_ids": [17628, 28520],
+            "type": "uptime",
+            "subtype": "buff",
+            "target": 100,
+        }
+    ],
+}
+
+
+@pytest.fixture
+def config_file_with_consumables(tmp_path):
+    path = tmp_path / "config.yaml"
+    with open(path, "w") as f:
+        yaml.dump(SAMPLE_CONFIG_WITH_CONSUMABLES, f)
+    return str(path)
+
+
+def test_get_consumables_returns_list(config_file_with_consumables):
+    loader = ConfigLoader(config_file_with_consumables)
+    result = loader.get_consumables()
+    assert len(result) == 1
+    assert result[0]["metric"] == "flask_uptime"
+
+
+def test_get_consumables_missing_returns_empty(config_file):
+    loader = ConfigLoader(config_file)
+    assert loader.get_consumables() == []
+
+
+def test_all_specs_excludes_consumables_key(config_file_with_consumables):
+    loader = ConfigLoader(config_file_with_consumables)
+    specs = loader.all_specs()
+    assert "consumables" not in specs
+    assert "warrior:protection" in specs

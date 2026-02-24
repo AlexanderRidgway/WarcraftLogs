@@ -15,9 +15,13 @@ class ConfigLoader:
         """Return the profile for a class:spec key, or None if not configured."""
         return self._data.get(spec_key)
 
+    def get_consumables(self) -> list:
+        """Return the global consumables list, or empty list if not configured."""
+        return self._data.get("consumables", [])
+
     def all_specs(self) -> list[str]:
-        """Return all configured spec keys."""
-        return list(self._data.keys())
+        """Return all configured spec keys, excluding non-spec top-level keys."""
+        return [k for k in self._data.keys() if k != "consumables"]
 
     def update_target(self, spec_key: str, metric: str, new_target: int) -> None:
         """Update the target for a metric in a spec profile and persist to disk."""
