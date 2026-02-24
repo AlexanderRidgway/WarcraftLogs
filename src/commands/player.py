@@ -6,8 +6,11 @@ from src.commands.topconsistent import _class_id_to_name
 
 
 @bot.tree.command(name="player", description="Show a player's parse and utility breakdown")
-@app_commands.describe(character="Character name (e.g. Thrallbro-Stormrage)")
-async def player_cmd(interaction: discord.Interaction, character: str):
+@app_commands.describe(
+    character="Character name (e.g. Thrallbro-Stormrage)",
+    log_url="(Optional) WarcraftLogs report URL to include consumable usage",
+)
+async def player_cmd(interaction: discord.Interaction, character: str, log_url: str = None):
     if not is_officer(interaction):
         await interaction.response.send_message("You don't have permission to use this command.", ephemeral=True)
         return
@@ -63,6 +66,36 @@ async def player_cmd(interaction: discord.Interaction, character: str):
 
     if profile is None:
         embed.description += f"\n\n⚠️ Spec `{spec_key}` not configured — utility metrics not included."
+
+    # Fetch consumables if a log URL was provided
+    if log_url:
+        from src.commands.raidrecap import _extract_report_code, _format_consumables
+        report_code = _extract_report_code(log_url)
+        consumables_profile = bot.config.get_consumables()
+        if report_code and consumables_profile:
+            try:
+                report_players = await bot.wcl.get_report_players(report_code)
+                timerange = await bot.wcl.get_report_timerange(report_code)
+                player_id_map = {p["name"]: p["id"] for p in report_players}
+                source_id = player_id_map.get(name)
+                if source_id is not None:
+                    c_data = await bot.wcl.get_utility_data(
+                        report_code, source_id,
+                        timerange["start"], timerange["end"],
+                        consumables_profile,
+                    )
+                    c_parts = _format_consumables(c_data, consumables_profile)
+                    embed.add_field(
+                        name="Consumables",
+                        value=", ".join(c_parts) if c_parts else "None detected",
+                        inline=False,
+                    )
+                else:
+                    embed.add_field(name="Consumables", value="Player not found in that report.", inline=False)
+            except Exception:
+                embed.add_field(name="Consumables", value="Could not fetch consumable data.", inline=False)
+        elif report_code is None:
+            embed.add_field(name="Consumables", value="Invalid log URL provided.", inline=False)
 
     await interaction.followup.send(embed=embed)
 
