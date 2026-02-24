@@ -56,9 +56,54 @@ async def raidrecap(interaction: discord.Interaction, log_url: str):
         lines.append(f"**{name}** ({spec}) — Score: **{score:.1f}** | Parse: {parse:.0f}")
 
     embed.description = "\n".join(lines) or "No standouts found."
-    embed.set_footer(text=f"Report: {report_code}")
 
+    # Fetch and display consumables for each standout player
+    consumables_profile = bot.config.get_consumables()
+    if consumables_profile:
+        try:
+            report_players = await bot.wcl.get_report_players(report_code)
+            timerange = await bot.wcl.get_report_timerange(report_code)
+            player_id_map = {p["name"]: p["id"] for p in report_players}
+
+            consumables_lines = []
+            for name, spec, score, parse in standouts:
+                source_id = player_id_map.get(name)
+                if source_id is None:
+                    continue
+                c_data = await bot.wcl.get_utility_data(
+                    report_code, source_id,
+                    timerange["start"], timerange["end"],
+                    consumables_profile,
+                )
+                c_parts = _format_consumables(c_data, consumables_profile)
+                if c_parts:
+                    consumables_lines.append(f"**{name}:** {', '.join(c_parts)}")
+
+            if consumables_lines:
+                embed.add_field(
+                    name="Consumables",
+                    value="\n".join(consumables_lines),
+                    inline=False,
+                )
+        except Exception:
+            pass  # Consumables are informational — don't fail the whole command
+
+    embed.set_footer(text=f"Report: {report_code}")
     await interaction.followup.send(embed=embed)
+
+
+def _format_consumables(c_data: dict, consumables_profile: list) -> list[str]:
+    """Return a list of non-zero consumable usage strings for display."""
+    parts = []
+    for contrib in consumables_profile:
+        val = c_data.get(contrib["metric"], 0)
+        if val and val > 0:
+            label = contrib["label"]
+            if contrib["type"] == "uptime":
+                parts.append(f"{label} {val:.0f}%")
+            else:
+                parts.append(f"{label} ×{int(val)}")
+    return parts
 
 
 def _extract_report_code(url: str) -> str | None:
