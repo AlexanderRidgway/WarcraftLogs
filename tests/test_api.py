@@ -170,3 +170,72 @@ async def test_get_report_utility_data():
     assert result["sunder_armor_uptime"] == pytest.approx(85.0, abs=0.1)
     assert result["thunderclap_count"] == 12
     assert call_count == 2
+
+
+@pytest.mark.asyncio
+async def test_get_utility_data_with_spell_ids_list():
+    """spell_ids list should match any aura whose id is in the list."""
+    client = WarcraftLogsClient(client_id="id", client_secret="secret")
+    client._token = "mock_token"
+    client._token_expiry = float("inf")
+
+    mock_response = {
+        "data": {
+            "reportData": {
+                "report": {
+                    "table": {
+                        "data": {
+                            "auras": [
+                                {"name": "Flask of Relentless Assault", "id": 28520, "totalUptime": 90000},
+                            ],
+                            "totalTime": 100000,
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    contributions = [
+        {
+            "spell_ids": [17628, 17627, 28518, 28520, 28521],
+            "metric": "flask_uptime",
+            "type": "uptime",
+            "subtype": "buff",
+        }
+    ]
+
+    client.query = AsyncMock(return_value=mock_response)
+    result = await client.get_utility_data("abc", source_id=1, start=0, end=100000, contributions=contributions)
+    assert result["flask_uptime"] == pytest.approx(90.0, abs=0.1)
+
+
+@pytest.mark.asyncio
+async def test_get_utility_data_spell_ids_list_no_match_returns_zero():
+    """spell_ids list with no matching aura should return 0.0."""
+    client = WarcraftLogsClient(client_id="id", client_secret="secret")
+    client._token = "mock_token"
+    client._token_expiry = float("inf")
+
+    mock_response = {
+        "data": {
+            "reportData": {
+                "report": {
+                    "table": {
+                        "data": {
+                            "auras": [],
+                            "totalTime": 100000,
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    contributions = [
+        {"spell_ids": [17628, 28520], "metric": "flask_uptime", "type": "uptime", "subtype": "buff"}
+    ]
+
+    client.query = AsyncMock(return_value=mock_response)
+    result = await client.get_utility_data("abc", source_id=1, start=0, end=100000, contributions=contributions)
+    assert result["flask_uptime"] == 0.0

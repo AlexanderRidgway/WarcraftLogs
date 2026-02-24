@@ -107,6 +107,13 @@ class WarcraftLogsClient:
             return []
         return zone["rankings"]
 
+    @staticmethod
+    def _contrib_matches(entry: dict, contrib: dict) -> bool:
+        """Return True if a WCL aura/cast entry matches the contribution's spell definition."""
+        if "spell_ids" in contrib:
+            return entry["id"] in contrib["spell_ids"]
+        return entry["id"] == contrib.get("spell_id")
+
     async def get_utility_data(
         self,
         report_code: str,
@@ -144,7 +151,7 @@ class WarcraftLogsClient:
                     total_time = buff_data.get("totalTime", 1)
 
             for contrib in uptime_contribs:
-                match = next((a for a in all_auras if a["id"] == contrib["spell_id"]), None)
+                match = next((a for a in all_auras if self._contrib_matches(a, contrib)), None)
                 if match:
                     result[contrib["metric"]] = (match["totalUptime"] / total_time) * 100
                 else:
@@ -154,7 +161,7 @@ class WarcraftLogsClient:
             cast_data = await self._query_table(report_code, source_id, start, end, "Casts")
             entries = cast_data.get("entries", [])
             for contrib in count_contribs:
-                match = next((e for e in entries if e["id"] == contrib["spell_id"]), None)
+                match = next((e for e in entries if self._contrib_matches(e, contrib)), None)
                 result[contrib["metric"]] = match["total"] if match else 0
 
         return result
