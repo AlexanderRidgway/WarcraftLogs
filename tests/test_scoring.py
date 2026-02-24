@@ -68,3 +68,70 @@ def test_no_contributions_ignores_parse_weight():
     }
     result = score_player(profile_low_weight, parse_percentile=75, utility_data={})
     assert result == pytest.approx(75.0, abs=0.1)
+
+
+CONSUMABLES_PROFILE = [
+    {"metric": "flask_uptime", "type": "uptime", "target": 100},
+    {"metric": "drums_count", "type": "count", "target": 4, "optional": True},
+    {"metric": "sapper_count", "type": "count", "target": 2, "optional": True},
+]
+
+PROFILE_WITH_CONSUMABLES = {
+    "utility_weight": 0.50,
+    "parse_weight": 0.40,
+    "consumables_weight": 0.10,
+    "contributions": [
+        {"metric": "sunder_armor_uptime", "type": "uptime", "target": 90},
+    ],
+}
+
+
+def test_consumables_weight_zero_ignores_consumables():
+    """consumables_weight: 0.00 means consumables never affect the score."""
+    profile = {**PROT_WARRIOR_PROFILE, "consumables_weight": 0.00}
+    consumables_data = {"flask_uptime": 0}
+    result = score_player(
+        profile, 100.0, {"sunder_armor_uptime": 90, "thunderclap_count": 15},
+        CONSUMABLES_PROFILE, consumables_data
+    )
+    # Same as no consumables: utility=100, parse=100 => 100*0.75 + 100*0.25 = 100
+    assert result == pytest.approx(100.0, abs=0.1)
+
+
+def test_consumables_scored_when_weight_nonzero():
+    """consumables_weight > 0 adds consumables score to total."""
+    consumables_data = {"flask_uptime": 100, "drums_count": 0, "sapper_count": 0}
+    utility_data = {"sunder_armor_uptime": 90}
+    result = score_player(
+        PROFILE_WITH_CONSUMABLES, 80.0, utility_data,
+        CONSUMABLES_PROFILE, consumables_data
+    )
+    # utility: 100*0.50=50; parse: 80*0.40=32; consumables: 100*0.10=10 => 92
+    assert result == pytest.approx(92.0, abs=0.1)
+
+
+def test_optional_metrics_not_included_in_consumables_score():
+    """optional: true metrics are shown in display but excluded from scoring."""
+    consumables_data = {"flask_uptime": 100, "drums_count": 0, "sapper_count": 0}
+    utility_data = {"sunder_armor_uptime": 90}
+    result = score_player(
+        PROFILE_WITH_CONSUMABLES, 80.0, utility_data,
+        CONSUMABLES_PROFILE, consumables_data
+    )
+    # drums and sapper are optional=True, so only flask_uptime (100) is scored
+    # consumables_score = 100; total = 50 + 32 + 10 = 92
+    assert result == pytest.approx(92.0, abs=0.1)
+
+
+def test_all_consumables_optional_returns_zero_consumables_score():
+    """If all consumables are optional, consumables_score is 0 even with weight."""
+    all_optional = [
+        {"metric": "drums_count", "type": "count", "target": 4, "optional": True},
+    ]
+    profile = {**PROFILE_WITH_CONSUMABLES}
+    result = score_player(
+        profile, 80.0, {"sunder_armor_uptime": 90},
+        all_optional, {"drums_count": 4}
+    )
+    # consumables_score = 0 (all optional); utility=100*0.50=50; parse=80*0.40=32
+    assert result == pytest.approx(82.0, abs=0.1)

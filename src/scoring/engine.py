@@ -1,4 +1,10 @@
-def score_player(spec_profile: dict, parse_percentile: float, utility_data: dict) -> float:
+def score_player(
+    spec_profile: dict,
+    parse_percentile: float,
+    utility_data: dict,
+    consumables_profile: list | None = None,
+    consumables_data: dict | None = None,
+) -> float:
     """
     Compute a single-boss performance score for a player.
 
@@ -6,18 +12,18 @@ def score_player(spec_profile: dict, parse_percentile: float, utility_data: dict
         spec_profile: The class:spec config entry (weights + contributions list)
         parse_percentile: WarcraftLogs parse rank 0-100
         utility_data: Dict of metric_name -> actual value (uptime % or cast count)
+        consumables_profile: Optional global consumables list from config
+        consumables_data: Optional dict of consumable metric_name -> actual value
 
     Returns:
         Score from 0-100
     """
-    utility_weight = spec_profile["utility_weight"]
-    parse_weight = spec_profile["parse_weight"]
-    contributions = spec_profile["contributions"]
+    utility_weight = spec_profile.get("utility_weight", 0.0)
+    parse_weight = spec_profile.get("parse_weight", 1.0)
+    consumables_weight = spec_profile.get("consumables_weight", 0.0)
+    contributions = spec_profile.get("contributions", [])
 
     if not contributions:
-        # No utility metrics configured — parse is the entire score.
-        # parse_weight is intentionally ignored: when there is nothing to
-        # measure for utility, the player is judged solely on parse performance.
         return float(parse_percentile)
 
     metric_scores = []
@@ -28,7 +34,24 @@ def score_player(spec_profile: dict, parse_percentile: float, utility_data: dict
         metric_scores.append(metric_score)
 
     utility_score = sum(metric_scores) / len(metric_scores)
-    return (utility_score * utility_weight) + (parse_percentile * parse_weight)
+
+    consumables_score = 0.0
+    if consumables_weight > 0 and consumables_profile and consumables_data is not None:
+        scored = [c for c in consumables_profile if not c.get("optional")]
+        if scored:
+            c_scores = []
+            for contrib in scored:
+                actual = consumables_data.get(contrib["metric"], 0)
+                target = contrib.get("target", 1)
+                c_score = min(actual / target, 1.0) * 100 if target > 0 else 0
+                c_scores.append(c_score)
+            consumables_score = sum(c_scores) / len(c_scores)
+
+    return (
+        (utility_score * utility_weight)
+        + (parse_percentile * parse_weight)
+        + (consumables_score * consumables_weight)
+    )
 
 
 def score_consistency(scores: list[float]) -> float:
