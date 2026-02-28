@@ -59,3 +59,35 @@ def score_consistency(scores: list[float]) -> float:
     if not scores:
         return 0.0
     return sum(scores) / len(scores)
+
+
+def aggregate_weekly_scores(report_scores: list[list[tuple]]) -> list[dict]:
+    """
+    Aggregate player scores across multiple reports.
+
+    Args:
+        report_scores: List of reports, each a list of (name, spec, score, parse) tuples.
+
+    Returns:
+        List of {name, spec, avg_score, avg_parse, fight_count} dicts, sorted by avg_score desc.
+    """
+    player_data: dict[str, dict] = {}
+    for report in report_scores:
+        for name, spec, score, parse in report:
+            if name not in player_data:
+                player_data[name] = {"spec": spec, "scores": [], "parses": []}
+            player_data[name]["scores"].append(score)
+            player_data[name]["parses"].append(parse)
+
+    result = []
+    for name, data in player_data.items():
+        result.append({
+            "name": name,
+            "spec": data["spec"],
+            "avg_score": sum(data["scores"]) / len(data["scores"]),
+            "avg_parse": sum(data["parses"]) / len(data["parses"]),
+            "fight_count": len(data["scores"]),
+        })
+
+    result.sort(key=lambda x: x["avg_score"], reverse=True)
+    return result

@@ -1,5 +1,5 @@
 import pytest
-from src.scoring.engine import score_player, score_consistency
+from src.scoring.engine import score_player, score_consistency, aggregate_weekly_scores
 
 PROT_WARRIOR_PROFILE = {
     "utility_weight": 0.75,
@@ -135,3 +135,38 @@ def test_all_consumables_optional_returns_zero_consumables_score():
     )
     # consumables_score = 0 (all optional); utility=100*0.50=50; parse=80*0.40=32
     assert result == pytest.approx(82.0, abs=0.1)
+
+
+def test_aggregate_weekly_scores_averages_per_player():
+    """Averages scores across multiple reports per player."""
+    report_scores = [
+        # Report 1
+        [("Thrallbro", "fury", 90.0, 85.0), ("Healbot", "holy", 80.0, 75.0)],
+        # Report 2
+        [("Thrallbro", "fury", 70.0, 65.0), ("Leetmage", "arcane", 95.0, 92.0)],
+    ]
+    result = aggregate_weekly_scores(report_scores)
+    # Thrallbro: avg score (90+70)/2=80, avg parse (85+65)/2=75, 2 fights
+    thrall = next(r for r in result if r["name"] == "Thrallbro")
+    assert thrall["avg_score"] == pytest.approx(80.0, abs=0.1)
+    assert thrall["avg_parse"] == pytest.approx(75.0, abs=0.1)
+    assert thrall["fight_count"] == 2
+    # Healbot: 1 fight
+    healbot = next(r for r in result if r["name"] == "Healbot")
+    assert healbot["fight_count"] == 1
+    # Result should be sorted by avg_score descending
+    assert result[0]["avg_score"] >= result[1]["avg_score"]
+
+
+def test_aggregate_weekly_scores_empty():
+    assert aggregate_weekly_scores([]) == []
+
+
+def test_aggregate_weekly_scores_single_report():
+    report_scores = [
+        [("Thrallbro", "fury", 90.0, 85.0)],
+    ]
+    result = aggregate_weekly_scores(report_scores)
+    assert len(result) == 1
+    assert result[0]["name"] == "Thrallbro"
+    assert result[0]["avg_score"] == 90.0
