@@ -39,7 +39,10 @@ async def player_cmd(interaction: discord.Interaction, character: str, log_url: 
         return
 
     spec = rankings[0].get("spec", "Unknown")
-    class_name = rankings[0].get("class", "").lower()
+    # zoneRankings JSON has class as numeric ID in bestRank, not as a top-level string
+    best_rank = rankings[0].get("bestRank") or {}
+    class_id = best_rank.get("class", 0)
+    class_name = _class_id_to_name(class_id)
     spec_key = f"{class_name}:{spec.lower()}"
     profile = bot.config.get_spec(spec_key)
 

@@ -138,14 +138,7 @@ class WarcraftLogsClient:
         query($name: String!, $serverSlug: String!, $serverRegion: String!, $zoneID: Int!) {
           characterData {
             character(name: $name, serverSlug: $serverSlug, serverRegion: $serverRegion) {
-              zoneRankings(zoneID: $zoneID) {
-                rankings {
-                  encounter { name }
-                  rankPercent
-                  spec
-                  class
-                }
-              }
+              zoneRankings(zoneID: $zoneID)
             }
           }
         }
@@ -157,22 +150,16 @@ class WarcraftLogsClient:
             "zoneID": zone_id,
         }
         result = await self.query(gql, variables)
-        logger.info("get_character_rankings(%s, %s, %s, zone=%s) raw response: %s",
-                     name, server_slug, region, zone_id, result)
+        if "errors" in result:
+            logger.warning("get_character_rankings GraphQL errors for %s: %s", name, result["errors"])
+            return []
         char = result["data"]["characterData"]["character"]
         if char is None:
-            logger.warning("Character not found: %s-%s (%s)", name, server_slug, region)
             return []
         zone = char.get("zoneRankings")
         if zone is None:
-            logger.warning("No zoneRankings for %s-%s zone %d: char keys=%s",
-                           name, server_slug, zone_id, list(char.keys()))
             return []
-        rankings = zone.get("rankings", [])
-        if not rankings:
-            logger.warning("zoneRankings empty for %s-%s zone %d: zone data=%s",
-                           name, server_slug, zone_id, zone)
-        return rankings
+        return zone.get("rankings", [])
 
     @staticmethod
     def _contrib_matches(entry: dict, contrib: dict) -> bool:

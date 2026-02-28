@@ -77,10 +77,10 @@ async def topconsistent(interaction: discord.Interaction, weeks: int = 4):
 
 
 def _class_id_to_name(class_id: int) -> str:
-    """Map WarcraftLogs class IDs to lowercase class names."""
+    """Map WarcraftLogs Classic Fresh class IDs to lowercase class names."""
     mapping = {
-        1: "warrior", 2: "paladin", 3: "hunter", 4: "rogue",
-        5: "priest", 6: "deathknight", 7: "shaman", 8: "mage",
-        9: "warlock", 11: "druid",
+        2: "druid", 3: "hunter", 4: "mage", 6: "paladin",
+        7: "priest", 8: "rogue", 9: "shaman", 10: "warlock",
+        11: "warrior",
     }
     return mapping.get(class_id, "unknown")
