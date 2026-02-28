@@ -1,6 +1,9 @@
+import logging
 import time
 import aiohttp
 from typing import Optional
+
+logger = logging.getLogger(__name__)
 
 TOKEN_URL = "https://www.warcraftlogs.com/oauth/token"
 API_URL = "https://www.warcraftlogs.com/api/v2/client"
@@ -99,14 +102,22 @@ class WarcraftLogsClient:
           }
         }
         """
-        result = await self.query(gql, {
+        variables = {
             "guildName": guild_name,
             "guildServerSlug": server_slug,
             "guildServerRegion": region,
             "startTime": float(start_time),
             "endTime": float(end_time),
-        })
-        reports_data = result["data"]["reportData"]["reports"]["data"]
+        }
+        logger.info("get_guild_reports query: %s", variables)
+        result = await self.query(gql, variables)
+        logger.info("get_guild_reports response keys: %s", result)
+        reports = result["data"]["reportData"]["reports"]
+        if reports is None:
+            logger.warning("WCL returned null for guild reports (guild=%s, server=%s, region=%s)",
+                           guild_name, server_slug, region)
+            return []
+        reports_data = reports["data"]
         return [
             {
                 "code": r["code"],

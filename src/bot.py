@@ -60,12 +60,8 @@ def is_officer(interaction: discord.Interaction) -> bool:
     member = interaction.user
     if not hasattr(member, "roles"):
         return False
-    role_names = [r.name for r in member.roles]
-    result = OFFICER_ROLE_NAME in role_names
-    if not result:
-        logger.info("is_officer check failed for %s: looking for '%s' in %s",
-                     member, OFFICER_ROLE_NAME, role_names)
-    return result
+    role_names = [r.name.lower() for r in member.roles]
+    return OFFICER_ROLE_NAME.lower() in role_names
 
 
 # Import command modules to register them with the bot tree.
