@@ -280,12 +280,17 @@ class WarcraftLogsClient:
         ]
 
     async def get_report_rankings(self, report_code: str) -> list:
-        """Fetch per-player rankings for all fights in a report."""
+        """Fetch per-player rankings for all fights in a report.
+
+        Returns a flat list of player entries, each with:
+        name, class, spec, rankPercent, encounter (from the fight).
+        A player appears once per fight they participated in.
+        """
         gql = """
         query($code: String!) {
           reportData {
             report(code: $code) {
-              rankings(playerMetric: default)
+              rankings(playerMetric: dps)
             }
           }
         }
@@ -297,7 +302,24 @@ class WarcraftLogsClient:
         rankings_data = report.get("rankings", {})
         if not rankings_data:
             return []
-        return rankings_data.get("data", [])
+
+        # Flatten the per-fight, per-role structure into a flat player list
+        flat = []
+        for fight in rankings_data.get("data", []):
+            encounter_name = fight.get("encounter", {}).get("name", "Unknown")
+            roles = fight.get("roles", {})
+            for role_data in roles.values():
+                if not isinstance(role_data, dict):
+                    continue
+                for char in role_data.get("characters", []):
+                    flat.append({
+                        "name": char.get("name", "Unknown"),
+                        "class": char.get("class", ""),
+                        "spec": char.get("spec", ""),
+                        "rankPercent": char.get("rankPercent", 0),
+                        "encounter": encounter_name,
+                    })
+        return flat
 
     async def get_report_players(self, report_code: str) -> list:
         """Return all player actors in a report as [{id, name}]."""
