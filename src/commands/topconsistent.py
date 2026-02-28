@@ -52,7 +52,7 @@ async def topconsistent(interaction: discord.Interaction, weeks: int = 4):
 
     scores = []
     for name, rankings in all_rankings.items():
-        spec = rankings[0].get("spec", "").lower()
+        spec = (rankings[0].get("spec") or "").lower()
         class_name = _class_id_to_name(class_ids.get(name, 0))
         spec_key = f"{class_name}:{spec}"
         profile = bot.config.get_spec(spec_key)
@@ -60,7 +60,7 @@ async def topconsistent(interaction: discord.Interaction, weeks: int = 4):
         _fallback_profile = {"utility_weight": 0.0, "parse_weight": 1.0, "contributions": []}
         boss_scores = []
         for ranking in rankings:
-            parse = ranking.get("rankPercent", 0)
+            parse = ranking.get("rankPercent") or 0
             active_profile = profile or _fallback_profile
             boss_scores.append(score_player(active_profile, parse, {}))
 

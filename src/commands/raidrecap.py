@@ -33,9 +33,9 @@ async def raidrecap(interaction: discord.Interaction, log_url: str):
     scored = []
     for entry in rankings:
         name = entry.get("name", "Unknown")
-        spec = entry.get("spec", "").lower()
-        class_name = entry.get("class", "").lower()
-        parse = entry.get("rankPercent", 0)
+        spec = (entry.get("spec") or "").lower()
+        class_name = (entry.get("class") or "").lower()
+        parse = entry.get("rankPercent") or 0
         spec_key = f"{class_name}:{spec}"
         profile = bot.config.get_spec(spec_key)
         _fallback = {"utility_weight": 0.0, "parse_weight": 1.0, "contributions": []}

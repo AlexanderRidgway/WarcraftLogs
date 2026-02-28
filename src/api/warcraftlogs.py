@@ -312,11 +312,11 @@ class WarcraftLogsClient:
                     continue
                 for char in role_data.get("characters", []):
                     name = char.get("name", "Unknown")
-                    player_parses.setdefault(name, []).append(char.get("rankPercent", 0))
+                    player_parses.setdefault(name, []).append(char.get("rankPercent") or 0)
                     if name not in player_info:
                         player_info[name] = {
-                            "class": char.get("class", ""),
-                            "spec": char.get("spec", ""),
+                            "class": char.get("class") or "",
+                            "spec": char.get("spec") or "",
                         }
 
         return [

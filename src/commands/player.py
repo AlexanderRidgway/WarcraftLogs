@@ -38,7 +38,7 @@ async def player_cmd(interaction: discord.Interaction, character: str, log_url: 
         await interaction.followup.send(f"No recent logs found for **{character}**.")
         return
 
-    spec = rankings[0].get("spec", "Unknown")
+    spec = rankings[0].get("spec") or "Unknown"
     # zoneRankings JSON has class as numeric ID in bestRank, not as a top-level string
     best_rank = rankings[0].get("bestRank") or {}
     class_id = best_rank.get("class", 0)
@@ -55,7 +55,7 @@ async def player_cmd(interaction: discord.Interaction, character: str, log_url: 
     boss_scores = []
     for ranking in rankings:
         boss = ranking["encounter"]["name"]
-        parse = ranking.get("rankPercent", 0)
+        parse = ranking.get("rankPercent") or 0
         _fallback = {"utility_weight": 0.0, "parse_weight": 1.0, "contributions": []}
         active_profile = profile or _fallback
         score = score_player(active_profile, parse, {})
