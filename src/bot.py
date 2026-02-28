@@ -1,4 +1,5 @@
 import importlib
+import logging
 import os
 import pathlib
 import discord
@@ -6,6 +7,8 @@ from discord import app_commands
 from dotenv import load_dotenv
 from src.api.warcraftlogs import WarcraftLogsClient
 from src.config.loader import ConfigLoader
+
+logger = logging.getLogger(__name__)
 
 load_dotenv()
 
@@ -31,15 +34,21 @@ class GuildBot(discord.Client):
 
     async def setup_hook(self):
         guild_id = os.getenv("DEV_GUILD_ID")
-        if guild_id:
-            guild = discord.Object(id=int(guild_id))
-            self.tree.copy_global_to(guild=guild)
-            await self.tree.sync(guild=guild)
-        else:
-            await self.tree.sync()
+        logger.info("setup_hook: DEV_GUILD_ID=%s, commands registered: %s",
+                     guild_id, [c.name for c in self.tree.get_commands()])
+        try:
+            if guild_id:
+                guild = discord.Object(id=int(guild_id))
+                self.tree.copy_global_to(guild=guild)
+                synced = await self.tree.sync(guild=guild)
+            else:
+                synced = await self.tree.sync()
+            logger.info("Synced %d commands: %s", len(synced), [c.name for c in synced])
+        except Exception:
+            logger.exception("Failed to sync commands")
 
     async def on_ready(self):
-        print(f"Logged in as {self.user}")
+        logger.info("Logged in as %s", self.user)
 
 
 bot = GuildBot()
