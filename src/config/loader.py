@@ -1,6 +1,14 @@
 import yaml
 from typing import Optional
 
+_GEAR_CHECK_DEFAULTS = {
+    "min_avg_ilvl": 100,
+    "min_quality": 3,
+    "check_enchants": True,
+    "check_gems": True,
+    "enchant_slots": [0, 1, 2, 4, 5, 6, 7, 8, 9, 14, 15],
+}
+
 
 class ConfigLoader:
     def __init__(self, path: str = "config.yaml"):
@@ -23,9 +31,16 @@ class ConfigLoader:
         """Return the attendance requirements list, or empty list if not configured."""
         return self._data.get("attendance", [])
 
+    def get_gear_check(self) -> dict:
+        """Return the gear check config, or defaults if not configured."""
+        config = self._data.get("gear_check")
+        if config is None:
+            return dict(_GEAR_CHECK_DEFAULTS)
+        return {**_GEAR_CHECK_DEFAULTS, **config}
+
     def all_specs(self) -> list[str]:
         """Return all configured spec keys, excluding non-spec top-level keys."""
-        return [k for k in self._data.keys() if k not in ("consumables", "attendance")]
+        return [k for k in self._data.keys() if k not in ("consumables", "attendance", "gear_check")]
 
     def update_target(self, spec_key: str, metric: str, new_target: int) -> None:
         """Update the target for a metric in a spec profile and persist to disk."""

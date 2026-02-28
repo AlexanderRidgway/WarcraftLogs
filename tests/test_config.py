@@ -196,3 +196,50 @@ def test_add_attendance_zone_persists(config_file_with_attendance):
     loader.add_attendance_zone(1005, "Magtheridon's Lair", 1)
     loader2 = ConfigLoader(config_file_with_attendance)
     assert len(loader2.get_attendance()) == 3
+
+
+SAMPLE_CONFIG_WITH_GEAR_CHECK = {
+    **SAMPLE_CONFIG,
+    "gear_check": {
+        "min_avg_ilvl": 100,
+        "min_quality": 3,
+        "check_enchants": True,
+        "check_gems": True,
+        "enchant_slots": [0, 1, 2, 4, 5, 6, 7, 8, 9, 14, 15],
+    },
+}
+
+
+@pytest.fixture
+def config_file_with_gear_check(tmp_path):
+    path = tmp_path / "config.yaml"
+    with open(path, "w") as f:
+        yaml.dump(SAMPLE_CONFIG_WITH_GEAR_CHECK, f)
+    return str(path)
+
+
+def test_get_gear_check_returns_config(config_file_with_gear_check):
+    loader = ConfigLoader(config_file_with_gear_check)
+    result = loader.get_gear_check()
+    assert result["min_avg_ilvl"] == 100
+    assert result["min_quality"] == 3
+    assert result["check_enchants"] is True
+    assert result["check_gems"] is True
+    assert 0 in result["enchant_slots"]
+
+
+def test_get_gear_check_missing_returns_defaults(config_file):
+    loader = ConfigLoader(config_file)
+    result = loader.get_gear_check()
+    assert result["min_avg_ilvl"] == 100
+    assert result["min_quality"] == 3
+    assert result["check_enchants"] is True
+    assert result["check_gems"] is True
+    assert isinstance(result["enchant_slots"], list)
+
+
+def test_all_specs_excludes_gear_check_key(config_file_with_gear_check):
+    loader = ConfigLoader(config_file_with_gear_check)
+    specs = loader.all_specs()
+    assert "gear_check" not in specs
+    assert "warrior:protection" in specs
