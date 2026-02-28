@@ -535,3 +535,19 @@ attendance:
   - zone_id: 1005
     label: "Magtheridon's Lair"
     required_per_week: 1
+
+# ──────────────────────────────────────────────
+# GEAR CHECK
+# Flag raiders with subpar gear in reports.
+# min_avg_ilvl: average item level floor
+# min_quality: minimum acceptable quality (2=green, 3=blue, 4=epic)
+# check_enchants/check_gems: toggle enchant/gem validation
+# enchant_slots: WoW slot IDs that should be enchanted
+# ──────────────────────────────────────────────
+
+gear_check:
+  min_avg_ilvl: 100
+  min_quality: 3
+  check_enchants: true
+  check_gems: true
+  enchant_slots: [0, 1, 2, 4, 5, 6, 7, 8, 9, 14, 15]
