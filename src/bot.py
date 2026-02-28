@@ -68,7 +68,7 @@ def is_officer(interaction: discord.Interaction) -> bool:
 
 # Import command modules to register them with the bot tree.
 # Guards against missing modules during incremental development (Tasks 8-11).
-_COMMAND_MODULES = ["topconsistent", "player", "raidrecap", "setconfig", "attendance", "setattendance", "gearcheck", "weeklyrecap", "configdump"]
+_COMMAND_MODULES = ["topconsistent", "player", "raidrecap", "setconfig", "attendance", "setattendance", "gearcheck", "weeklyrecap", "configdump", "consumecheck"]
 for _mod in _COMMAND_MODULES:
     try:
         importlib.import_module(f"src.commands.{_mod}")

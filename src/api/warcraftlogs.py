@@ -184,9 +184,10 @@ class WarcraftLogsClient:
     @staticmethod
     def _contrib_matches(entry: dict, contrib: dict) -> bool:
         """Return True if a WCL aura/cast entry matches the contribution's spell definition."""
+        spell_id = entry.get("guid") or entry.get("id")
         if "spell_ids" in contrib:
-            return entry["id"] in contrib["spell_ids"]
-        return entry["id"] == contrib.get("spell_id")
+            return spell_id in contrib["spell_ids"]
+        return spell_id == contrib.get("spell_id")
 
     async def get_utility_data(
         self,

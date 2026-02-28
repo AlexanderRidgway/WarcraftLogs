@@ -125,7 +125,7 @@ async def test_get_report_utility_data():
                     "table": {
                         "data": {
                             "auras": [
-                                {"name": "Sunder Armor", "id": 7386, "totalUptime": 85000, "type": "debuff"},
+                                {"name": "Sunder Armor", "guid": 7386, "totalUptime": 85000, "type": "debuff"},
                             ],
                             "totalTime": 100000,
                         }
@@ -142,7 +142,7 @@ async def test_get_report_utility_data():
                     "table": {
                         "data": {
                             "entries": [
-                                {"name": "Thunderclap", "id": 6343, "total": 12},
+                                {"name": "Thunderclap", "guid": 6343, "total": 12},
                             ]
                         }
                     }
@@ -186,7 +186,7 @@ async def test_get_utility_data_with_spell_ids_list():
                     "table": {
                         "data": {
                             "auras": [
-                                {"name": "Flask of Relentless Assault", "id": 28520, "totalUptime": 90000},
+                                {"name": "Flask of Relentless Assault", "guid": 28520, "totalUptime": 90000},
                             ],
                             "totalTime": 100000,
                         }
