@@ -35,6 +35,10 @@ def check_player_gear(gear_items: list, gear_config: dict) -> dict:
         item_level = item.get("itemLevel", 0)
         quality = item.get("quality", 0)
 
+        # Skip empty slots (e.g. off-hand when using a 2-handed weapon)
+        if item.get("id", 0) == 0 or item_level == 0:
+            continue
+
         ilvl_sum += item_level
         ilvl_count += 1
 
