@@ -134,32 +134,52 @@ class WarcraftLogsClient:
         self, name: str, server_slug: str, region: str, zone_id: int
     ) -> list:
         """Fetch parse percentile rankings per boss for a character."""
-        gql = """
-        query($name: String!, $serverSlug: String!, $serverRegion: String!, $zoneID: Int!) {
-          characterData {
-            character(name: $name, serverSlug: $serverSlug, serverRegion: $serverRegion) {
-              zoneRankings(zoneID: $zoneID)
-            }
-          }
-        }
+        results = await self.get_character_rankings_batch(
+            [(name, server_slug, region)], zone_id
+        )
+        return results.get(name, [])
+
+    async def get_character_rankings_batch(
+        self, characters: list[tuple[str, str, str]], zone_id: int
+    ) -> dict[str, list]:
+        """Fetch rankings for multiple characters in a single GraphQL query.
+
+        characters: list of (name, server_slug, region) tuples
+        Returns: dict of character_name -> list of ranking entries
         """
-        variables = {
-            "name": name,
-            "serverSlug": server_slug,
-            "serverRegion": region,
-            "zoneID": zone_id,
-        }
-        result = await self.query(gql, variables)
+        if not characters:
+            return {}
+
+        # Build a batched query using GraphQL aliases
+        alias_parts = []
+        for i, (name, server_slug, region) in enumerate(characters):
+            # Sanitize name for use as GraphQL alias (alphanumeric only)
+            alias = f"char{i}"
+            alias_parts.append(
+                f'{alias}: character(name: "{name}", serverSlug: "{server_slug}", '
+                f'serverRegion: "{region}") {{ zoneRankings(zoneID: {zone_id}) }}'
+            )
+
+        gql = "query { characterData { " + " ".join(alias_parts) + " } }"
+        result = await self.query(gql)
         if "errors" in result:
-            logger.warning("get_character_rankings GraphQL errors for %s: %s", name, result["errors"])
-            return []
-        char = result["data"]["characterData"]["character"]
-        if char is None:
-            return []
-        zone = char.get("zoneRankings")
-        if zone is None:
-            return []
-        return zone.get("rankings", [])
+            logger.warning("get_character_rankings_batch GraphQL errors: %s", result["errors"])
+            return {}
+
+        char_data = result.get("data", {}).get("characterData", {})
+        output = {}
+        for i, (name, _, _) in enumerate(characters):
+            alias = f"char{i}"
+            char = char_data.get(alias)
+            if char is None:
+                continue
+            zone = char.get("zoneRankings")
+            if zone is None:
+                continue
+            rankings = zone.get("rankings", [])
+            if rankings:
+                output[name] = rankings
+        return output
 
     @staticmethod
     def _contrib_matches(entry: dict, contrib: dict) -> bool:

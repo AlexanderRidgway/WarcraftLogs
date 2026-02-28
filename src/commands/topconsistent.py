@@ -1,4 +1,3 @@
-import asyncio
 import logging
 import discord
 from discord import app_commands
@@ -7,27 +6,7 @@ from src.scoring.engine import score_player, score_consistency
 
 logger = logging.getLogger(__name__)
 
-_API_SEMAPHORE = asyncio.Semaphore(10)
-
-
-async def _fetch_member_rankings(member: dict) -> tuple[str, int, list] | None:
-    """Fetch rankings for a single roster member across all zones, concurrently."""
-    name = member["name"]
-    server_slug = member["server"]["slug"]
-    region = member["server"]["region"]["slug"].upper()
-
-    all_rankings = []
-    for zone_id in ZONE_IDS:
-        try:
-            async with _API_SEMAPHORE:
-                rankings = await bot.wcl.get_character_rankings(name, server_slug, region, zone_id)
-            all_rankings.extend(rankings)
-        except Exception:
-            continue
-
-    if not all_rankings:
-        return None
-    return (name, member.get("classID", 0), all_rankings)
+_BATCH_SIZE = 15
 
 
 @bot.tree.command(name="topconsistent", description="Rank raiders by consistency score")
@@ -48,24 +27,39 @@ async def topconsistent(interaction: discord.Interaction, weeks: int = 4):
 
     logger.info("Roster has %d members, checking zones %s", len(roster), ZONE_IDS)
 
-    # Fetch all member rankings concurrently (semaphore limits to 10 at a time)
-    tasks = [_fetch_member_rankings(m) for m in roster]
-    results = await asyncio.gather(*tasks)
+    # Build character tuples and class ID lookup
+    characters = []
+    class_ids = {}
+    for member in roster:
+        name = member["name"]
+        server_slug = member["server"]["slug"]
+        region = member["server"]["region"]["slug"].upper()
+        characters.append((name, server_slug, region))
+        class_ids[name] = member.get("classID", 0)
+
+    # Fetch rankings in batched GraphQL queries (15 chars per query × 2 zones)
+    all_rankings: dict[str, list] = {}
+    for zone_id in ZONE_IDS:
+        for i in range(0, len(characters), _BATCH_SIZE):
+            batch = characters[i:i + _BATCH_SIZE]
+            try:
+                batch_results = await bot.wcl.get_character_rankings_batch(batch, zone_id)
+                for name, rankings in batch_results.items():
+                    all_rankings.setdefault(name, []).extend(rankings)
+            except Exception:
+                logger.exception("Batch ranking query failed for zone %d batch %d", zone_id, i)
+                continue
 
     scores = []
-    for result in results:
-        if result is None:
-            continue
-        name, class_id, all_rankings = result
-
-        spec = all_rankings[0].get("spec", "").lower()
-        class_name = _class_id_to_name(class_id)
+    for name, rankings in all_rankings.items():
+        spec = rankings[0].get("spec", "").lower()
+        class_name = _class_id_to_name(class_ids.get(name, 0))
         spec_key = f"{class_name}:{spec}"
         profile = bot.config.get_spec(spec_key)
 
         _fallback_profile = {"utility_weight": 0.0, "parse_weight": 1.0, "contributions": []}
         boss_scores = []
-        for ranking in all_rankings:
+        for ranking in rankings:
             parse = ranking.get("rankPercent", 0)
             active_profile = profile or _fallback_profile
             boss_scores.append(score_player(active_profile, parse, {}))

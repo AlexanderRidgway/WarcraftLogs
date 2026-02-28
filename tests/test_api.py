@@ -87,7 +87,7 @@ async def test_get_character_rankings():
     mock_response_data = {
         "data": {
             "characterData": {
-                "character": {
+                "char0": {
                     "zoneRankings": {
                         "rankings": [
                             {
