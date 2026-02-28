@@ -37,14 +37,35 @@ WarcraftLogs/
 │       └── engine.py           # score_player(), score_consistency(), aggregate_weekly_scores()
 ├── tests/
 │   ├── test_api.py             # 15 tests — OAuth2, roster, rankings, utility, spell_ids, report players/timerange, guild_reports, report_gear
-│   ├── test_config.py          # 22 tests — load, get_spec, update_target, get_consumables, all_specs, attendance CRUD, gear_check
+│   ├── test_config.py          # 29 tests — load, get_spec, update_target, get_consumables, all_specs, attendance CRUD, gear_check, S3 sync
 │   ├── test_scoring.py         # 15 tests — weighted scoring, consumables_weight, optional flag, aggregate_weekly_scores
 │   ├── test_attendance.py      # 7 tests — group_reports_by_week, check_player_attendance
 │   ├── test_gear.py            # 11 tests — gear quality, enchant, gem, ilvl checks
 │   └── test_weeklyrecap.py      # 3 tests — week range calculation
+├── infra/
+│   ├── main.tf                 # Terraform backend + provider config
+│   ├── variables.tf            # Input variables
+│   ├── ec2.tf                  # EC2 instance + security group
+│   ├── iam.tf                  # IAM role + instance profile
+│   ├── ecr.tf                  # ECR repository
+│   ├── s3.tf                   # S3 config bucket
+│   ├── secrets.tf              # Secrets Manager secret
+│   ├── cloudwatch.tf           # CloudWatch log group
+│   ├── outputs.tf              # Terraform outputs
+│   ├── user-data.sh            # EC2 instance bootstrap script
+│   └── bootstrap/
+│       └── bootstrap.sh        # One-time S3 + DynamoDB setup for Terraform state
+├── .github/
+│   └── workflows/
+│       ├── ci.yml              # Run tests on every push/PR
+│       └── deploy.yml          # Build + deploy on push to HR/Testing
 ├── config.yaml                 # Officer-maintained class:spec profiles
 ├── .env.example                # Template for required environment variables
+├── .dockerignore               # Files excluded from Docker build
+├── Dockerfile                  # Docker image definition
+├── entrypoint.sh               # Container startup (secrets + S3 + bot)
 ├── requirements.txt            # Python dependencies
+├── requirements-dev.txt        # Dev/test dependencies
 ├── pytest.ini                  # pythonpath=., asyncio_mode=auto
 └── README.md                   # Setup guide and command reference
 ```
@@ -56,7 +77,7 @@ WarcraftLogs/
 - aiohttp 3.9.1 (async HTTP + WarcraftLogs API)
 - pyyaml 6.0.1 (config.yaml)
 - python-dotenv 1.0.0 (`.env` file)
-- pytest + pytest-asyncio (73 tests, all passing)
+- pytest + pytest-asyncio (80 tests, all passing)
 
 ## Environment Variables (see .env.example)
 
@@ -248,7 +269,7 @@ attendance:
 pytest
 ```
 
-All 73 tests should pass. Tests use mocked WCL API responses — no real credentials needed.
+All 80 tests should pass. Tests use mocked WCL API responses — no real credentials needed.
 
 ## Running the Bot
 
@@ -280,3 +301,26 @@ python -m src.bot
 13. **Attendance is informational only** — Attendance tracking does not affect player scores. It is a separate reporting tool for officers to monitor raid participation. WCL reports are grouped by ISO week (Monday–Sunday) and compared against per-zone weekly requirements.
 14. **Gear data is per-report snapshot** — Gear check uses the equipment snapshot stored in WarcraftLogs reports, not live Armory data. This means it reflects what players actually wore during the raid, not what they have equipped now.
 15. **Weekly Recap uses multi-embed output** — `/weeklyrecap` sends 4 embeds in a single message (top performers, zone summaries, attendance, gear issues) to stay within Discord's character limits while showing a complete weekly digest.
+16. **S3 config sync** — ConfigLoader uploads config.yaml to S3 after each save and downloads from S3 on startup. Controlled by `CONFIG_S3_BUCKET` env var. When not set (local dev), S3 sync is skipped. Failures log warnings but never crash the bot.
+17. **Docker entrypoint handles secrets** — `entrypoint.sh` pulls secrets from AWS Secrets Manager and exports them as environment variables before starting the bot. Also downloads config.yaml from S3 for belt-and-suspenders persistence (ConfigLoader also does this).
+
+## AWS Deployment
+
+**Infrastructure:** Terraform in `infra/` manages EC2, ECR, S3, Secrets Manager, IAM, CloudWatch.
+
+**CI/CD:** GitHub Actions runs tests on every push (`.github/workflows/ci.yml`) and deploys to EC2 on push to HR/Testing (`.github/workflows/deploy.yml`).
+
+**GitHub Secrets Required:**
+- `AWS_ACCESS_KEY_ID` — IAM user access key
+- `AWS_SECRET_ACCESS_KEY` — IAM user secret key
+- `AWS_REGION` — AWS region (e.g., `us-east-1`)
+- `EC2_INSTANCE_ID` — From `terraform output instance_id`
+- `CONFIG_S3_BUCKET` — From `terraform output config_bucket`
+
+**First Deploy:**
+1. Run `infra/bootstrap/bootstrap.sh <region> <account-id>`
+2. `cd infra && terraform init -backend-config="bucket=warcraftlogs-terraform-state-<account-id>" -backend-config="region=<region>" -backend-config="dynamodb_table=warcraftlogs-terraform-locks"`
+3. `terraform apply -var="aws_account_id=<account-id>"`
+4. Set secrets: `aws secretsmanager put-secret-value --secret-id warcraftlogs-bot/credentials --secret-string '{"DISCORD_BOT_TOKEN":"...","WARCRAFTLOGS_CLIENT_ID":"...","WARCRAFTLOGS_CLIENT_SECRET":"...","GUILD_NAME":"...","GUILD_SERVER":"...","GUILD_REGION":"US","OFFICER_ROLE_NAME":"Officer"}'`
+5. Configure GitHub repository secrets
+6. Push to HR/Testing to trigger first deploy

@@ -200,4 +200,65 @@ Update this as the guild progresses through content:
 pytest
 ```
 
-All 73 tests should pass. No real credentials needed — all WCL API responses are mocked.
+All 80 tests should pass. No real credentials needed — all WCL API responses are mocked.
+
+## AWS Deployment
+
+The bot can be deployed to AWS using the included Terraform infrastructure and GitHub Actions CI/CD pipeline.
+
+### Prerequisites
+
+- AWS CLI configured with admin credentials
+- Terraform >= 1.5.0 installed
+- Docker installed (for local image builds)
+- GitHub repository with Actions enabled
+
+### Quick Start
+
+1. **Bootstrap Terraform state storage:**
+   ```bash
+   cd infra/bootstrap
+   ./bootstrap.sh us-east-1 YOUR_ACCOUNT_ID
+   ```
+
+2. **Initialize and apply Terraform:**
+   ```bash
+   cd infra
+   terraform init \
+     -backend-config="bucket=warcraftlogs-terraform-state-YOUR_ACCOUNT_ID" \
+     -backend-config="region=us-east-1" \
+     -backend-config="dynamodb_table=warcraftlogs-terraform-locks"
+   terraform apply -var="aws_account_id=YOUR_ACCOUNT_ID"
+   ```
+
+3. **Set bot secrets in AWS Secrets Manager:**
+   ```bash
+   aws secretsmanager put-secret-value \
+     --secret-id warcraftlogs-bot/credentials \
+     --secret-string '{"DISCORD_BOT_TOKEN":"...","WARCRAFTLOGS_CLIENT_ID":"...","WARCRAFTLOGS_CLIENT_SECRET":"...","GUILD_NAME":"...","GUILD_SERVER":"...","GUILD_REGION":"US","OFFICER_ROLE_NAME":"Officer"}'
+   ```
+
+4. **Configure GitHub repository secrets:**
+   - `AWS_ACCESS_KEY_ID`
+   - `AWS_SECRET_ACCESS_KEY`
+   - `AWS_REGION` (e.g., `us-east-1`)
+   - `EC2_INSTANCE_ID` (from `terraform output instance_id`)
+   - `CONFIG_S3_BUCKET` (from `terraform output config_bucket`)
+
+5. **Push to HR/Testing** to trigger the first deploy.
+
+### Infrastructure
+
+| Resource | Purpose |
+|---|---|
+| EC2 (t3.micro) | Runs the bot Docker container |
+| ECR | Stores Docker images |
+| S3 | Persists config.yaml across deploys |
+| Secrets Manager | Stores Discord token, WCL credentials |
+| CloudWatch Logs | Captures bot output |
+| IAM Role | EC2 instance permissions |
+
+### CI/CD Pipeline
+
+- **Every push/PR:** Runs pytest (80 tests)
+- **Push to HR/Testing:** Builds Docker image → pushes to ECR → deploys to EC2 via SSM
