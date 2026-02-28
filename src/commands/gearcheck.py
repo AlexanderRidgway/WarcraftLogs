@@ -1,8 +1,11 @@
+import logging
 import discord
 from discord import app_commands
 from src.bot import bot
 from src.commands.raidrecap import _extract_report_code
 from src.gear.checker import check_raid_gear
+
+logger = logging.getLogger(__name__)
 
 
 @bot.tree.command(name="gearcheck", description="Check gear readiness from a raid log")
@@ -22,6 +25,7 @@ async def gearcheck_cmd(interaction: discord.Interaction, log_url: str):
     try:
         players_gear = await bot.wcl.get_report_gear(report_code)
     except Exception:
+        logger.exception("Failed to fetch gear data for report %s", report_code)
         await interaction.followup.send("Could not fetch gear data from this report.")
         return
 

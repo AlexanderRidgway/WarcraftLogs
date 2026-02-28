@@ -409,23 +409,32 @@ async def test_get_report_gear():
     client._token_expiry = float("inf")
 
     mock_table_data = {
-        "playerDetails": [
-            {
-                "name": "Thrallbro",
-                "id": 5,
-                "gear": [
-                    {"id": 28785, "slot": 0, "quality": 4, "itemLevel": 125, "permanentEnchant": 3003, "gems": [{"id": 24027}]},
-                    {"id": 27803, "slot": 4, "quality": 3, "itemLevel": 112, "permanentEnchant": 2661, "gems": []},
-                ],
-            },
-            {
-                "name": "Healbot",
-                "id": 7,
-                "gear": [
-                    {"id": 12345, "slot": 0, "quality": 2, "itemLevel": 87, "gems": []},
-                ],
-            },
-        ]
+        "playerDetails": {
+            "tanks": [
+                {
+                    "name": "Thrallbro",
+                    "id": 5,
+                    "combatantInfo": {
+                        "gear": [
+                            {"id": 28785, "slot": 0, "quality": 4, "itemLevel": 125, "permanentEnchant": 3003, "gems": [{"id": 24027}]},
+                            {"id": 27803, "slot": 4, "quality": 3, "itemLevel": 112, "permanentEnchant": 2661, "gems": []},
+                        ],
+                    },
+                },
+            ],
+            "healers": [
+                {
+                    "name": "Healbot",
+                    "id": 7,
+                    "combatantInfo": {
+                        "gear": [
+                            {"id": 12345, "slot": 0, "quality": 2, "itemLevel": 87, "gems": []},
+                        ],
+                    },
+                },
+            ],
+            "dps": [],
+        }
     }
 
     async def mock_query_table(report_code, source_id, start, end, data_type):
@@ -450,7 +459,7 @@ async def test_get_report_gear_empty():
     client._token_expiry = float("inf")
 
     async def mock_query_table(report_code, source_id, start, end, data_type):
-        return {"playerDetails": []}
+        return {"playerDetails": {"tanks": [], "healers": [], "dps": []}}
 
     client._query_table = mock_query_table
     result = await client.get_report_gear("abc123")

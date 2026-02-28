@@ -270,13 +270,21 @@ class WarcraftLogsClient:
     async def get_report_gear(self, report_code: str) -> list:
         """Fetch gear snapshots for all players in a report from the Summary table."""
         table_data = await self._query_table(report_code, None, 0, 999999999999, "Summary")
-        player_details = table_data.get("playerDetails", [])
+        player_details = table_data.get("playerDetails", {})
+        # playerDetails is grouped by role: {healers: [...], tanks: [...], dps: [...]}
+        all_players = []
+        if isinstance(player_details, dict):
+            for role_players in player_details.values():
+                if isinstance(role_players, list):
+                    all_players.extend(role_players)
+        elif isinstance(player_details, list):
+            all_players = player_details
         return [
             {
                 "name": p["name"],
-                "gear": p.get("gear", []),
+                "gear": p.get("combatantInfo", {}).get("gear", []),
             }
-            for p in player_details
+            for p in all_players
         ]
 
     async def get_report_rankings(self, report_code: str) -> list:
