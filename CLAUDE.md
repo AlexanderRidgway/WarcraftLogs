@@ -18,19 +18,24 @@ WarcraftLogs/
 │   ├── bot.py                  # Bot entry point, GuildBot class, officer check
 │   ├── api/
 │   │   └── warcraftlogs.py     # WarcraftLogs GraphQL client (OAuth2 + queries)
+│   ├── attendance/
+│   │   └── checker.py          # group_reports_by_week(), check_player_attendance()
 │   ├── commands/
 │   │   ├── topconsistent.py    # /topconsistent — ranks guild members by consistency
 │   │   ├── player.py           # /player — per-boss breakdown for one character
 │   │   ├── raidrecap.py        # /raidrecap — scores everyone in a log URL
-│   │   └── setconfig.py        # /setconfig — officers update metric targets
+│   │   ├── setconfig.py        # /setconfig — officers update metric targets
+│   │   ├── attendance.py       # /attendance, /attendancereport — player & guild attendance
+│   │   └── setattendance.py    # /setattendance add/remove/update/list — officer commands
 │   ├── config/
 │   │   └── loader.py           # ConfigLoader: reads/writes config.yaml
 │   └── scoring/
 │       └── engine.py           # score_player(), score_consistency()
 ├── tests/
-│   ├── test_api.py             # 10 tests — OAuth2, roster, rankings, utility, spell_ids, report players/timerange
-│   ├── test_config.py          # 9 tests — load, get_spec, update_target, get_consumables, all_specs
-│   └── test_scoring.py         # 12 tests — weighted scoring, consumables_weight, optional flag
+│   ├── test_api.py             # 13 tests — OAuth2, roster, rankings, utility, spell_ids, report players/timerange, guild_reports
+│   ├── test_config.py          # 19 tests — load, get_spec, update_target, get_consumables, all_specs, attendance CRUD
+│   ├── test_scoring.py         # 12 tests — weighted scoring, consumables_weight, optional flag
+│   └── test_attendance.py      # 7 tests — group_reports_by_week, check_player_attendance
 ├── config.yaml                 # Officer-maintained class:spec profiles
 ├── .env.example                # Template for required environment variables
 ├── requirements.txt            # Python dependencies
@@ -45,7 +50,7 @@ WarcraftLogs/
 - aiohttp 3.9.1 (async HTTP + WarcraftLogs API)
 - pyyaml 6.0.1 (config.yaml)
 - python-dotenv 1.0.0 (`.env` file)
-- pytest + pytest-asyncio (31 tests, all passing)
+- pytest + pytest-asyncio (51 tests, all passing)
 
 ## Environment Variables (see .env.example)
 
@@ -129,6 +134,21 @@ consumables:
 
 **`optional: true`:** Metric is displayed in reports but excluded from score calculations. Use for profession-gated items (Engineering, Leatherworking) and situational consumables (Dark/Demonic Runes).
 
+**`attendance:` key:** A top-level key listing raid zones and their weekly clear requirements. Officers manage this via `/setattendance` or by editing `config.yaml` directly.
+
+```yaml
+attendance:
+  - zone_id: 1002
+    label: "Karazhan"
+    required_per_week: 1
+  - zone_id: 1004
+    label: "Gruul's Lair"
+    required_per_week: 1
+  - zone_id: 1005
+    label: "Magtheridon's Lair"
+    required_per_week: 1
+```
+
 **Configured specs (22 total):** warrior:protection, warrior:fury, warrior:arms, paladin:holy, paladin:protection, paladin:retribution, rogue:combat, hunter:beast mastery, hunter:survival, shaman:restoration, shaman:elemental, shaman:enhancement, druid:feral, druid:restoration, druid:balance, mage:arcane, mage:fire, warlock:affliction, warlock:destruction, priest:holy, priest:discipline, priest:shadow
 
 ## Key TBC Spell IDs
@@ -199,6 +219,9 @@ consumables:
 | `/player <character> [log_url]` | All | Per-boss parse + utility breakdown; add a log URL to include consumables |
 | `/raidrecap <log_url>` | All | Scores standout performers in a report; includes consumables section |
 | `/setconfig <spec> <metric> <target>` | Officers only | Updates a target value in config.yaml |
+| `/attendance <character> [weeks]` | All | Per-player raid attendance report |
+| `/attendancereport [weeks]` | All | Guild-wide attendance summary |
+| `/setattendance add/remove/update/list` | Officers only | Manage attendance requirements |
 
 ## Running Tests
 
@@ -206,7 +229,7 @@ consumables:
 pytest
 ```
 
-All 31 tests should pass. Tests use mocked WCL API responses — no real credentials needed.
+All 51 tests should pass. Tests use mocked WCL API responses — no real credentials needed.
 
 ## Running the Bot
 
@@ -235,3 +258,4 @@ python -m src.bot
 10. **`spell_ids` list in contributions** — Supports matching any one of multiple spell IDs per metric. Used for flasks (multiple flask types), elixirs, and drums. The `_contrib_matches` helper in `WarcraftLogsClient` handles both `spell_id` (single) and `spell_ids` (list) — backwards compatible.
 11. **Consumables fetched from report actors** — `/raidrecap` and `/player` (with `log_url`) use `get_report_players()` to look up source IDs and `get_report_timerange()` for the full report window before querying consumable data. The consumables block is wrapped in `try/except` so failures never surface to the user.
 12. **`_format_consumables` and `_extract_report_code` live in `raidrecap.py`** — `/player` imports them from there at call time to avoid circular imports.
+13. **Attendance is informational only** — Attendance tracking does not affect player scores. It is a separate reporting tool for officers to monitor raid participation. WCL reports are grouped by ISO week (Monday–Sunday) and compared against per-zone weekly requirements.

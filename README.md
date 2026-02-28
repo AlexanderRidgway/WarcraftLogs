@@ -45,6 +45,32 @@ Updates a metric target value in `config.yaml` without restarting the bot.
 /setconfig warrior:protection consumables_weight 0.10
 ```
 
+### `/attendance <character> [weeks]`
+Shows a player's raid attendance over the last N weeks (default: 4). Displays per-zone check/cross marks for each week.
+
+```
+/attendance Thrallbro
+/attendance Thrallbro weeks:8
+```
+
+### `/attendancereport [weeks]`
+Shows a guild-wide attendance summary over the last N weeks (default: 4). Lists players who missed required raids and counts those with perfect attendance.
+
+```
+/attendancereport
+/attendancereport weeks:8
+```
+
+### `/setattendance add/remove/update/list` *(Officers only)*
+Manage raid attendance requirements. Add or remove zones, update the required number of clears per week, or list the current configuration.
+
+```
+/setattendance add zone_id:1002 label:Karazhan required_per_week:1
+/setattendance remove zone_id:1002
+/setattendance update zone_id:1002 required_per_week:2
+/setattendance list
+```
+
 ## Consumables Tracking
 
 All specs have `consumables_weight: 0.00` by default — consumables are shown as **informational only** and do not affect scores. To enable scoring, raise `consumables_weight` (and lower `parse_weight` by the same amount) so all three weights still sum to `1.0`.
@@ -64,6 +90,26 @@ All specs have `consumables_weight: 0.00` by default — consumables are shown a
 | Drums | Never | Informational only — Leatherworking required |
 | Goblin Sapper | Never | Informational only — Engineering required |
 | Grenade / Bomb | Never | Informational only — Engineering required |
+
+## Attendance Tracking
+
+The bot tracks raid attendance by fetching guild reports from WarcraftLogs and grouping them by ISO week (Monday through Sunday). Each player's participation is compared against the configured per-zone weekly requirements.
+
+**Default configuration:**
+
+| Zone | Zone ID | Required per week |
+|---|---|---|
+| Karazhan | 1002 | 1 |
+| Gruul's Lair | 1004 | 1 |
+| Magtheridon's Lair | 1005 | 1 |
+
+Attendance is **informational only** — it does not affect player scores.
+
+**Adjusting requirements:**
+- Use `/setattendance add`, `/setattendance remove`, or `/setattendance update` in Discord
+- Or edit the `attendance:` section in `config.yaml` directly and restart the bot
+
+See the **TBC Zone IDs** table below for zone IDs as the guild progresses through content.
 
 ## Updating Config
 
@@ -98,4 +144,4 @@ Update this as the guild progresses through content:
 pytest
 ```
 
-All 31 tests should pass. No real credentials needed — all WCL API responses are mocked.
+All 51 tests should pass. No real credentials needed — all WCL API responses are mocked.
