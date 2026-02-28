@@ -238,6 +238,18 @@ class WarcraftLogsClient:
             raise ValueError(f"Table data unavailable for report '{report_code}' (dataType={data_type})")
         return table["data"]
 
+    async def get_report_gear(self, report_code: str) -> list:
+        """Fetch gear snapshots for all players in a report from the Summary table."""
+        table_data = await self._query_table(report_code, None, 0, 999999999999, "Summary")
+        player_details = table_data.get("playerDetails", [])
+        return [
+            {
+                "name": p["name"],
+                "gear": p.get("gear", []),
+            }
+            for p in player_details
+        ]
+
     async def get_report_rankings(self, report_code: str) -> list:
         """Fetch per-player rankings for all fights in a report."""
         gql = """

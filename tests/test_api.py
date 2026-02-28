@@ -399,3 +399,60 @@ async def test_get_guild_reports_null_zone_skipped():
 
     assert len(reports) == 1
     assert reports[0]["code"] == "def456"
+
+
+@pytest.mark.asyncio
+async def test_get_report_gear():
+    """Returns list of players with their gear arrays from a report summary."""
+    client = WarcraftLogsClient(client_id="id", client_secret="secret")
+    client._token = "mock_token"
+    client._token_expiry = float("inf")
+
+    mock_table_data = {
+        "playerDetails": [
+            {
+                "name": "Thrallbro",
+                "id": 5,
+                "gear": [
+                    {"id": 28785, "slot": 0, "quality": 4, "itemLevel": 125, "permanentEnchant": 3003, "gems": [{"id": 24027}]},
+                    {"id": 27803, "slot": 4, "quality": 3, "itemLevel": 112, "permanentEnchant": 2661, "gems": []},
+                ],
+            },
+            {
+                "name": "Healbot",
+                "id": 7,
+                "gear": [
+                    {"id": 12345, "slot": 0, "quality": 2, "itemLevel": 87, "gems": []},
+                ],
+            },
+        ]
+    }
+
+    async def mock_query_table(report_code, source_id, start, end, data_type):
+        return mock_table_data
+
+    client._query_table = mock_query_table
+    result = await client.get_report_gear("abc123")
+
+    assert len(result) == 2
+    assert result[0]["name"] == "Thrallbro"
+    assert len(result[0]["gear"]) == 2
+    assert result[0]["gear"][0]["quality"] == 4
+    assert result[1]["name"] == "Healbot"
+    assert result[1]["gear"][0]["quality"] == 2
+
+
+@pytest.mark.asyncio
+async def test_get_report_gear_empty():
+    """Returns empty list when no player details found."""
+    client = WarcraftLogsClient(client_id="id", client_secret="secret")
+    client._token = "mock_token"
+    client._token_expiry = float("inf")
+
+    async def mock_query_table(report_code, source_id, start, end, data_type):
+        return {"playerDetails": []}
+
+    client._query_table = mock_query_table
+    result = await client.get_report_gear("abc123")
+
+    assert result == []
