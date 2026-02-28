@@ -1,7 +1,10 @@
+import logging
 import time
 import discord
 from discord import app_commands
 from src.bot import bot, GUILD_NAME, GUILD_SERVER, GUILD_REGION
+
+logger = logging.getLogger(__name__)
 from src.attendance.checker import check_player_attendance
 
 
@@ -24,6 +27,7 @@ async def attendance_cmd(interaction: discord.Interaction, character: str, weeks
     try:
         reports = await bot.wcl.get_guild_reports(GUILD_NAME, GUILD_SERVER, GUILD_REGION, start_ms, now_ms)
     except Exception:
+        logger.exception("Failed to fetch guild reports")
         await interaction.followup.send("Failed to fetch guild reports from WarcraftLogs.")
         return
 
@@ -76,6 +80,7 @@ async def attendancereport_cmd(interaction: discord.Interaction, weeks: int = 4)
     try:
         reports = await bot.wcl.get_guild_reports(GUILD_NAME, GUILD_SERVER, GUILD_REGION, start_ms, now_ms)
     except Exception:
+        logger.exception("Failed to fetch guild reports")
         await interaction.followup.send("Failed to fetch guild reports from WarcraftLogs.")
         return
 
