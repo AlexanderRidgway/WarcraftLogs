@@ -41,6 +41,37 @@ class ConfigLoader:
 
         raise ValueError(f"metric '{metric}' not found in spec '{spec_key}'")
 
+    def add_attendance_zone(self, zone_id: int, label: str, required_per_week: int) -> None:
+        """Add a new zone to attendance requirements and persist to disk."""
+        attendance = self._data.setdefault("attendance", [])
+        if any(e["zone_id"] == zone_id for e in attendance):
+            raise ValueError(f"Zone {zone_id} already exists in attendance config")
+        attendance.append({
+            "zone_id": zone_id,
+            "label": label,
+            "required_per_week": required_per_week,
+        })
+        self._save()
+
+    def remove_attendance_zone(self, zone_id: int) -> None:
+        """Remove a zone from attendance requirements and persist to disk."""
+        attendance = self._data.get("attendance", [])
+        original_len = len(attendance)
+        self._data["attendance"] = [e for e in attendance if e["zone_id"] != zone_id]
+        if len(self._data["attendance"]) == original_len:
+            raise ValueError(f"Zone {zone_id} not found in attendance config")
+        self._save()
+
+    def update_attendance_zone(self, zone_id: int, required_per_week: int) -> None:
+        """Update the required_per_week for a zone and persist to disk."""
+        attendance = self._data.get("attendance", [])
+        for entry in attendance:
+            if entry["zone_id"] == zone_id:
+                entry["required_per_week"] = required_per_week
+                self._save()
+                return
+        raise ValueError(f"Zone {zone_id} not found in attendance config")
+
     def _save(self) -> None:
         with open(self._path, "w") as f:
             yaml.dump(self._data, f, default_flow_style=False, sort_keys=False)

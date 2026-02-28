@@ -147,3 +147,52 @@ def test_all_specs_excludes_attendance_key(config_file_with_attendance):
     specs = loader.all_specs()
     assert "attendance" not in specs
     assert "warrior:protection" in specs
+
+
+def test_add_attendance_zone(config_file_with_attendance):
+    loader = ConfigLoader(config_file_with_attendance)
+    loader.add_attendance_zone(1005, "Magtheridon's Lair", 1)
+    result = loader.get_attendance()
+    assert len(result) == 3
+    assert result[2]["zone_id"] == 1005
+
+
+def test_add_attendance_zone_duplicate_raises(config_file_with_attendance):
+    loader = ConfigLoader(config_file_with_attendance)
+    with pytest.raises(ValueError, match="already exists"):
+        loader.add_attendance_zone(1002, "Karazhan", 1)
+
+
+def test_remove_attendance_zone(config_file_with_attendance):
+    loader = ConfigLoader(config_file_with_attendance)
+    loader.remove_attendance_zone(1002)
+    result = loader.get_attendance()
+    assert len(result) == 1
+    assert result[0]["zone_id"] == 1004
+
+
+def test_remove_attendance_zone_not_found_raises(config_file_with_attendance):
+    loader = ConfigLoader(config_file_with_attendance)
+    with pytest.raises(ValueError, match="not found"):
+        loader.remove_attendance_zone(9999)
+
+
+def test_update_attendance_zone(config_file_with_attendance):
+    loader = ConfigLoader(config_file_with_attendance)
+    loader.update_attendance_zone(1002, 2)
+    result = loader.get_attendance()
+    entry = next(e for e in result if e["zone_id"] == 1002)
+    assert entry["required_per_week"] == 2
+
+
+def test_update_attendance_zone_not_found_raises(config_file_with_attendance):
+    loader = ConfigLoader(config_file_with_attendance)
+    with pytest.raises(ValueError, match="not found"):
+        loader.update_attendance_zone(9999, 2)
+
+
+def test_add_attendance_zone_persists(config_file_with_attendance):
+    loader = ConfigLoader(config_file_with_attendance)
+    loader.add_attendance_zone(1005, "Magtheridon's Lair", 1)
+    loader2 = ConfigLoader(config_file_with_attendance)
+    assert len(loader2.get_attendance()) == 3
