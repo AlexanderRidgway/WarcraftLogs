@@ -1,0 +1,58 @@
+name: Deploy
+
+on:
+  push:
+    branches: [HR/Testing]
+
+jobs:
+  test:
+    uses: ./.github/workflows/ci.yml
+
+  deploy:
+    needs: test
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/HR/Testing'
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ secrets.AWS_REGION }}
+
+      - name: Login to Amazon ECR
+        id: ecr-login
+        uses: aws-actions/amazon-ecr-login@v2
+
+      - name: Build and push Docker image
+        env:
+          ECR_REGISTRY: ${{ steps.ecr-login.outputs.registry }}
+          ECR_REPOSITORY: warcraftlogs-bot
+          IMAGE_TAG: ${{ github.sha }}
+        run: |
+          docker build -t $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG .
+          docker tag $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG $ECR_REGISTRY/$ECR_REPOSITORY:latest
+          docker push $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
+          docker push $ECR_REGISTRY/$ECR_REPOSITORY:latest
+
+      - name: Deploy to EC2 via SSM
+        env:
+          ECR_REGISTRY: ${{ steps.ecr-login.outputs.registry }}
+          ECR_REPOSITORY: warcraftlogs-bot
+          INSTANCE_ID: ${{ secrets.EC2_INSTANCE_ID }}
+        run: |
+          aws ssm send-command \
+            --instance-ids "$INSTANCE_ID" \
+            --document-name "AWS-RunShellScript" \
+            --parameters "commands=[
+              'aws ecr get-login-password --region ${{ secrets.AWS_REGION }} | docker login --username AWS --password-stdin $ECR_REGISTRY',
+              'docker pull $ECR_REGISTRY/$ECR_REPOSITORY:latest',
+              'docker stop warcraftlogs-bot || true',
+              'docker rm warcraftlogs-bot || true',
+              'docker run -d --name warcraftlogs-bot --restart unless-stopped --log-driver=awslogs --log-opt awslogs-region=${{ secrets.AWS_REGION }} --log-opt awslogs-group=/ecs/warcraftlogs-bot -e AWS_SECRET_NAME=warcraftlogs-bot/credentials -e CONFIG_S3_BUCKET=${{ secrets.CONFIG_S3_BUCKET }} -e AWS_DEFAULT_REGION=${{ secrets.AWS_REGION }} $ECR_REGISTRY/$ECR_REPOSITORY:latest'
+            ]" \
+            --output text
