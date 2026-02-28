@@ -2,7 +2,7 @@ name: Deploy
 
 on:
   push:
-    branches: [HR/Testing]
+    branches: [main]
 
 jobs:
   test:
@@ -11,7 +11,7 @@ jobs:
   deploy:
     needs: test
     runs-on: ubuntu-latest
-    if: github.ref == 'refs/heads/HR/Testing'
+    if: github.ref == 'refs/heads/main'
 
     steps:
       - name: Checkout code
