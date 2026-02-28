@@ -1,7 +1,10 @@
+import logging
 import discord
 from discord import app_commands
-from src.bot import bot, is_officer, GUILD_NAME, GUILD_SERVER, GUILD_REGION, TBC_ZONE_ID
+from src.bot import bot, is_officer, GUILD_NAME, GUILD_SERVER, GUILD_REGION, ZONE_IDS
 from src.scoring.engine import score_player, score_consistency
+
+logger = logging.getLogger(__name__)
 
 
 @bot.tree.command(name="topconsistent", description="Rank raiders by consistency score")
@@ -16,8 +19,11 @@ async def topconsistent(interaction: discord.Interaction, weeks: int = 4):
     try:
         roster = await bot.wcl.get_guild_roster(GUILD_NAME, GUILD_SERVER, GUILD_REGION)
     except Exception:
+        logger.exception("Failed to fetch guild roster")
         await interaction.followup.send("Failed to fetch guild roster from WarcraftLogs.")
         return
+
+    logger.info("Roster has %d members, checking zones %s", len(roster), ZONE_IDS)
 
     scores = []
     for member in roster:
@@ -25,22 +31,25 @@ async def topconsistent(interaction: discord.Interaction, weeks: int = 4):
         server_slug = member["server"]["slug"]
         region = member["server"]["region"]["slug"].upper()
 
-        try:
-            rankings = await bot.wcl.get_character_rankings(name, server_slug, region, TBC_ZONE_ID)
-        except Exception:
+        all_rankings = []
+        for zone_id in ZONE_IDS:
+            try:
+                rankings = await bot.wcl.get_character_rankings(name, server_slug, region, zone_id)
+                all_rankings.extend(rankings)
+            except Exception:
+                continue
+
+        if not all_rankings:
             continue
 
-        if not rankings:
-            continue
-
-        spec = rankings[0].get("spec", "").lower()
+        spec = all_rankings[0].get("spec", "").lower()
         class_name = _class_id_to_name(member.get("classID", 0))
         spec_key = f"{class_name}:{spec}"
         profile = bot.config.get_spec(spec_key)
 
         _fallback_profile = {"utility_weight": 0.0, "parse_weight": 1.0, "contributions": []}
         boss_scores = []
-        for ranking in rankings:
+        for ranking in all_rankings:
             parse = ranking.get("rankPercent", 0)
             active_profile = profile or _fallback_profile
             boss_scores.append(score_player(active_profile, parse, {}))

@@ -1,6 +1,6 @@
 import discord
 from discord import app_commands
-from src.bot import bot, is_officer, GUILD_REGION, TBC_ZONE_ID
+from src.bot import bot, is_officer, GUILD_REGION, ZONE_IDS
 from src.scoring.engine import score_player, score_consistency
 from src.commands.topconsistent import _class_id_to_name
 
@@ -24,15 +24,15 @@ async def player_cmd(interaction: discord.Interaction, character: str, log_url: 
         name = character
         server_slug = None
 
-    try:
-        rankings = await bot.wcl.get_character_rankings(
-            name, server_slug or "unknown", GUILD_REGION, TBC_ZONE_ID
-        )
-    except Exception:
-        await interaction.followup.send(
-            f"Could not find **{character}** on WarcraftLogs. Check the spelling and try `Name-Server` format."
-        )
-        return
+    rankings = []
+    for zone_id in ZONE_IDS:
+        try:
+            zone_rankings = await bot.wcl.get_character_rankings(
+                name, server_slug or "unknown", GUILD_REGION, zone_id
+            )
+            rankings.extend(zone_rankings)
+        except Exception:
+            continue
 
     if not rankings:
         await interaction.followup.send(f"No recent logs found for **{character}**.")

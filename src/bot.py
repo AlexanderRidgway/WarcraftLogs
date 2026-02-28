@@ -17,7 +17,8 @@ OFFICER_ROLE_NAME = os.getenv("OFFICER_ROLE_NAME", "Officer")
 GUILD_NAME = os.getenv("GUILD_NAME")
 GUILD_SERVER = (os.getenv("GUILD_SERVER") or "").lower()
 GUILD_REGION = os.getenv("GUILD_REGION", "US")
-TBC_ZONE_ID = 1007  # The Eye zone — update to current tier as needed
+TBC_ZONE_ID = 1047  # Karazhan — kept for backwards compat
+ZONE_IDS = [1047, 1048]  # Karazhan, Gruul/Magtheridon
 
 _REPO_ROOT = pathlib.Path(__file__).parent.parent
 
