@@ -109,3 +109,41 @@ def test_all_specs_excludes_consumables_key(config_file_with_consumables):
     specs = loader.all_specs()
     assert "consumables" not in specs
     assert "warrior:protection" in specs
+
+
+SAMPLE_CONFIG_WITH_ATTENDANCE = {
+    **SAMPLE_CONFIG,
+    "attendance": [
+        {"zone_id": 1002, "label": "Karazhan", "required_per_week": 1},
+        {"zone_id": 1004, "label": "Gruul's Lair", "required_per_week": 1},
+    ],
+}
+
+
+@pytest.fixture
+def config_file_with_attendance(tmp_path):
+    path = tmp_path / "config.yaml"
+    with open(path, "w") as f:
+        yaml.dump(SAMPLE_CONFIG_WITH_ATTENDANCE, f)
+    return str(path)
+
+
+def test_get_attendance_returns_list(config_file_with_attendance):
+    loader = ConfigLoader(config_file_with_attendance)
+    result = loader.get_attendance()
+    assert len(result) == 2
+    assert result[0]["zone_id"] == 1002
+    assert result[0]["label"] == "Karazhan"
+    assert result[0]["required_per_week"] == 1
+
+
+def test_get_attendance_missing_returns_empty(config_file):
+    loader = ConfigLoader(config_file)
+    assert loader.get_attendance() == []
+
+
+def test_all_specs_excludes_attendance_key(config_file_with_attendance):
+    loader = ConfigLoader(config_file_with_attendance)
+    specs = loader.all_specs()
+    assert "attendance" not in specs
+    assert "warrior:protection" in specs
