@@ -1,7 +1,7 @@
 from datetime import datetime, timezone, timedelta
 import discord
 from discord import app_commands
-from src.bot import bot, GUILD_NAME, GUILD_SERVER, GUILD_REGION
+from src.bot import bot, is_officer, GUILD_NAME, GUILD_SERVER, GUILD_REGION
 from src.scoring.engine import score_player, aggregate_weekly_scores
 from src.attendance.checker import check_player_attendance
 from src.gear.checker import check_raid_gear
@@ -26,7 +26,15 @@ def _week_range_ms(weeks_ago: int = 0) -> tuple[int, int, str]:
 @bot.tree.command(name="weeklyrecap", description="Full weekly raid digest from guild reports")
 @app_commands.describe(weeks_ago="How many weeks back to look (0 = current week, 1 = last week)")
 async def weeklyrecap_cmd(interaction: discord.Interaction, weeks_ago: int = 0):
+    if not is_officer(interaction):
+        await interaction.response.send_message("You don't have permission to use this command.", ephemeral=True)
+        return
+
     await interaction.response.defer()
+
+    if weeks_ago < 0 or weeks_ago > 52:
+        await interaction.followup.send("weeks_ago must be between 0 and 52.")
+        return
 
     start_ms, end_ms, week_label = _week_range_ms(weeks_ago)
 
