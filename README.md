@@ -78,6 +78,14 @@ Checks gear readiness for all players in a WarcraftLogs report. Flags players wi
 /gearcheck https://www.warcraftlogs.com/reports/ABC12345
 ```
 
+### `/weeklyrecap [weeks_ago]` *(Officers only)*
+Shows a full weekly raid digest from your guild's WarcraftLogs page. Automatically pulls all reports for the target week and produces four embeds: top performers, zone summaries, attendance, and gear issues.
+
+```
+/weeklyrecap
+/weeklyrecap weeks_ago:1
+```
+
 ## Consumables Tracking
 
 All specs have `consumables_weight: 0.00` by default — consumables are shown as **informational only** and do not affect scores. To enable scoring, raise `consumables_weight` (and lower `parse_weight` by the same amount) so all three weights still sum to `1.0`.
@@ -146,6 +154,19 @@ gear_check:
   enchant_slots: [0, 1, 2, 4, 5, 6, 7, 8, 9, 14, 15]  # WoW slot IDs to check for enchants
 ```
 
+## Weekly Recap
+
+The `/weeklyrecap` command provides a complete weekly digest by automatically pulling all guild reports for a given week. It produces four embeds:
+
+| Embed | Content |
+|---|---|
+| Top Performers | Top 10 raiders ranked by average score across all reports |
+| Zone Summaries | Per-zone top 3 performers, run counts, and player counts |
+| Attendance | Players who missed required raids (uses attendance config) |
+| Gear Issues | Players with gear problems across all reports (worst snapshot kept) |
+
+Use `weeks_ago:0` (default) for the current week, `weeks_ago:1` for last week, etc.
+
 ## Updating Config
 
 Use `/setconfig` in Discord, or edit `config.yaml` directly and restart the bot.
@@ -179,4 +200,4 @@ Update this as the guild progresses through content:
 pytest
 ```
 
-All 67 tests should pass. No real credentials needed — all WCL API responses are mocked.
+All 73 tests should pass. No real credentials needed — all WCL API responses are mocked.

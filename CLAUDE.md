@@ -27,19 +27,21 @@ WarcraftLogs/
 │   │   ├── setconfig.py        # /setconfig — officers update metric targets
 │   │   ├── attendance.py       # /attendance, /attendancereport — player & guild attendance
 │   │   ├── setattendance.py    # /setattendance add/remove/update/list — officer commands
-│   │   └── gearcheck.py        # /gearcheck — gear readiness check from a raid report
+│   │   ├── gearcheck.py        # /gearcheck — gear readiness check from a raid report
+│   │   └── weeklyrecap.py      # /weeklyrecap — full weekly raid digest
 │   ├── gear/
 │   │   └── checker.py          # gear quality, enchant, and gem validation logic
 │   ├── config/
 │   │   └── loader.py           # ConfigLoader: reads/writes config.yaml
 │   └── scoring/
-│       └── engine.py           # score_player(), score_consistency()
+│       └── engine.py           # score_player(), score_consistency(), aggregate_weekly_scores()
 ├── tests/
-│   ├── test_api.py             # 13 tests — OAuth2, roster, rankings, utility, spell_ids, report players/timerange, guild_reports
+│   ├── test_api.py             # 15 tests — OAuth2, roster, rankings, utility, spell_ids, report players/timerange, guild_reports, report_gear
 │   ├── test_config.py          # 19 tests — load, get_spec, update_target, get_consumables, all_specs, attendance CRUD
-│   ├── test_scoring.py         # 12 tests — weighted scoring, consumables_weight, optional flag
+│   ├── test_scoring.py         # 15 tests — weighted scoring, consumables_weight, optional flag, aggregate_weekly_scores
 │   ├── test_attendance.py      # 7 tests — group_reports_by_week, check_player_attendance
-│   └── test_gear.py            # 11 tests — gear quality, enchant, gem, ilvl checks
+│   ├── test_gear.py            # 11 tests — gear quality, enchant, gem, ilvl checks
+│   ├── test_weeklyrecap.py      # 3 tests — week range calculation
 ├── config.yaml                 # Officer-maintained class:spec profiles
 ├── .env.example                # Template for required environment variables
 ├── requirements.txt            # Python dependencies
@@ -54,7 +56,7 @@ WarcraftLogs/
 - aiohttp 3.9.1 (async HTTP + WarcraftLogs API)
 - pyyaml 6.0.1 (config.yaml)
 - python-dotenv 1.0.0 (`.env` file)
-- pytest + pytest-asyncio (67 tests, all passing)
+- pytest + pytest-asyncio (73 tests, all passing)
 
 ## Environment Variables (see .env.example)
 
@@ -238,6 +240,7 @@ attendance:
 | `/attendancereport [weeks]` | All | Guild-wide attendance summary |
 | `/setattendance add/remove/update/list` | Officers only | Manage attendance requirements |
 | `/gearcheck <log_url>` | All | Check gear readiness from a raid report |
+| `/weeklyrecap [weeks_ago]` | Officers only | Full weekly raid digest from guild reports |
 
 ## Running Tests
 
@@ -245,7 +248,7 @@ attendance:
 pytest
 ```
 
-All 67 tests should pass. Tests use mocked WCL API responses — no real credentials needed.
+All 73 tests should pass. Tests use mocked WCL API responses — no real credentials needed.
 
 ## Running the Bot
 
@@ -276,3 +279,4 @@ python -m src.bot
 12. **`_format_consumables` and `_extract_report_code` live in `raidrecap.py`** — `/player` imports them from there at call time to avoid circular imports.
 13. **Attendance is informational only** — Attendance tracking does not affect player scores. It is a separate reporting tool for officers to monitor raid participation. WCL reports are grouped by ISO week (Monday–Sunday) and compared against per-zone weekly requirements.
 14. **Gear data is per-report snapshot** — Gear check uses the equipment snapshot stored in WarcraftLogs reports, not live Armory data. This means it reflects what players actually wore during the raid, not what they have equipped now.
+15. **Weekly Recap uses multi-embed output** — `/weeklyrecap` sends 4 embeds in a single message (top performers, zone summaries, attendance, gear issues) to stay within Discord's character limits while showing a complete weekly digest.
