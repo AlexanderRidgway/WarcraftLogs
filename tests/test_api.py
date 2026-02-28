@@ -294,3 +294,108 @@ async def test_get_report_timerange():
         timerange = await client.get_report_timerange("abc123")
 
     assert timerange == {"start": 0, "end": 90000}
+
+
+@pytest.mark.asyncio
+async def test_get_guild_reports():
+    """Returns list of reports with code, startTime, zone, and player names."""
+    client = WarcraftLogsClient(client_id="id", client_secret="secret")
+    client._token = "mock_token"
+    client._token_expiry = float("inf")
+
+    mock_response = {
+        "data": {
+            "reportData": {
+                "reports": {
+                    "data": [
+                        {
+                            "code": "abc123",
+                            "startTime": 1709000000000,
+                            "zone": {"id": 1002, "name": "Karazhan"},
+                            "rankedCharacters": [
+                                {"name": "Thrallbro"},
+                                {"name": "Healbot"},
+                            ],
+                        },
+                        {
+                            "code": "def456",
+                            "startTime": 1709100000000,
+                            "zone": {"id": 1004, "name": "Gruul's Lair"},
+                            "rankedCharacters": [
+                                {"name": "Thrallbro"},
+                            ],
+                        },
+                    ]
+                }
+            }
+        }
+    }
+
+    with patch.object(client, "query", new_callable=AsyncMock, return_value=mock_response):
+        reports = await client.get_guild_reports("TestGuild", "stormrage", "US", 1709000000000, 1709200000000)
+
+    assert len(reports) == 2
+    assert reports[0]["code"] == "abc123"
+    assert reports[0]["zone"]["id"] == 1002
+    assert len(reports[0]["players"]) == 2
+    assert reports[0]["players"][0] == "Thrallbro"
+
+
+@pytest.mark.asyncio
+async def test_get_guild_reports_empty():
+    """Returns empty list when no reports found."""
+    client = WarcraftLogsClient(client_id="id", client_secret="secret")
+    client._token = "mock_token"
+    client._token_expiry = float("inf")
+
+    mock_response = {
+        "data": {
+            "reportData": {
+                "reports": {
+                    "data": []
+                }
+            }
+        }
+    }
+
+    with patch.object(client, "query", new_callable=AsyncMock, return_value=mock_response):
+        reports = await client.get_guild_reports("TestGuild", "stormrage", "US", 1709000000000, 1709200000000)
+
+    assert reports == []
+
+
+@pytest.mark.asyncio
+async def test_get_guild_reports_null_zone_skipped():
+    """Reports with null zone are excluded from results."""
+    client = WarcraftLogsClient(client_id="id", client_secret="secret")
+    client._token = "mock_token"
+    client._token_expiry = float("inf")
+
+    mock_response = {
+        "data": {
+            "reportData": {
+                "reports": {
+                    "data": [
+                        {
+                            "code": "abc123",
+                            "startTime": 1709000000000,
+                            "zone": None,
+                            "rankedCharacters": [{"name": "Thrallbro"}],
+                        },
+                        {
+                            "code": "def456",
+                            "startTime": 1709100000000,
+                            "zone": {"id": 1002, "name": "Karazhan"},
+                            "rankedCharacters": [{"name": "Thrallbro"}],
+                        },
+                    ]
+                }
+            }
+        }
+    }
+
+    with patch.object(client, "query", new_callable=AsyncMock, return_value=mock_response):
+        reports = await client.get_guild_reports("TestGuild", "stormrage", "US", 1709000000000, 1709200000000)
+
+    assert len(reports) == 1
+    assert reports[0]["code"] == "def456"

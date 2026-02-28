@@ -73,6 +73,51 @@ class WarcraftLogsClient:
             return []
         return guild["members"]["data"]
 
+    async def get_guild_reports(
+        self,
+        guild_name: str,
+        server_slug: str,
+        region: str,
+        start_time: int,
+        end_time: int,
+    ) -> list:
+        """Fetch all guild reports within a time range, with zone and player data."""
+        gql = """
+        query($guildName: String!, $guildServerSlug: String!, $guildServerRegion: String!,
+              $startTime: Float!, $endTime: Float!) {
+          reportData {
+            reports(guildName: $guildName, guildServerSlug: $guildServerSlug,
+                    guildServerRegion: $guildServerRegion,
+                    startTime: $startTime, endTime: $endTime) {
+              data {
+                code
+                startTime
+                zone { id name }
+                rankedCharacters { name }
+              }
+            }
+          }
+        }
+        """
+        result = await self.query(gql, {
+            "guildName": guild_name,
+            "guildServerSlug": server_slug,
+            "guildServerRegion": region,
+            "startTime": float(start_time),
+            "endTime": float(end_time),
+        })
+        reports_data = result["data"]["reportData"]["reports"]["data"]
+        return [
+            {
+                "code": r["code"],
+                "startTime": r["startTime"],
+                "zone": r["zone"],
+                "players": [c["name"] for c in (r.get("rankedCharacters") or [])],
+            }
+            for r in reports_data
+            if r.get("zone") is not None
+        ]
+
     async def get_character_rankings(
         self, name: str, server_slug: str, region: str, zone_id: int
     ) -> list:
