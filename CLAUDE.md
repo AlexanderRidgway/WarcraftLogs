@@ -26,7 +26,10 @@ WarcraftLogs/
 │   │   ├── raidrecap.py        # /raidrecap — scores everyone in a log URL
 │   │   ├── setconfig.py        # /setconfig — officers update metric targets
 │   │   ├── attendance.py       # /attendance, /attendancereport — player & guild attendance
-│   │   └── setattendance.py    # /setattendance add/remove/update/list — officer commands
+│   │   ├── setattendance.py    # /setattendance add/remove/update/list — officer commands
+│   │   └── gearcheck.py        # /gearcheck — gear readiness check from a raid report
+│   ├── gear/
+│   │   └── checker.py          # gear quality, enchant, and gem validation logic
 │   ├── config/
 │   │   └── loader.py           # ConfigLoader: reads/writes config.yaml
 │   └── scoring/
@@ -35,7 +38,8 @@ WarcraftLogs/
 │   ├── test_api.py             # 13 tests — OAuth2, roster, rankings, utility, spell_ids, report players/timerange, guild_reports
 │   ├── test_config.py          # 19 tests — load, get_spec, update_target, get_consumables, all_specs, attendance CRUD
 │   ├── test_scoring.py         # 12 tests — weighted scoring, consumables_weight, optional flag
-│   └── test_attendance.py      # 7 tests — group_reports_by_week, check_player_attendance
+│   ├── test_attendance.py      # 7 tests — group_reports_by_week, check_player_attendance
+│   └── test_gear.py            # 11 tests — gear quality, enchant, gem, ilvl checks
 ├── config.yaml                 # Officer-maintained class:spec profiles
 ├── .env.example                # Template for required environment variables
 ├── requirements.txt            # Python dependencies
@@ -50,7 +54,7 @@ WarcraftLogs/
 - aiohttp 3.9.1 (async HTTP + WarcraftLogs API)
 - pyyaml 6.0.1 (config.yaml)
 - python-dotenv 1.0.0 (`.env` file)
-- pytest + pytest-asyncio (51 tests, all passing)
+- pytest + pytest-asyncio (67 tests, all passing)
 
 ## Environment Variables (see .env.example)
 
@@ -133,6 +137,17 @@ consumables:
 **`spell_ids` list:** Use instead of `spell_id` when a metric can match any of several spell IDs (e.g. flasks, elixirs, drums). The API client checks `entry["id"] in spell_ids`.
 
 **`optional: true`:** Metric is displayed in reports but excluded from score calculations. Use for profession-gated items (Engineering, Leatherworking) and situational consumables (Dark/Demonic Runes).
+
+**`gear_check:` key:** A top-level key with gear validation thresholds. Used by `/gearcheck` and `/raidrecap` gear summary.
+
+```yaml
+gear_check:
+  min_avg_ilvl: 100
+  min_quality: 3          # 2=green, 3=blue, 4=epic
+  check_enchants: true
+  check_gems: true
+  enchant_slots: [0, 1, 2, 4, 5, 6, 7, 8, 9, 14, 15]   # WoW slot IDs that should be enchanted
+```
 
 **`attendance:` key:** A top-level key listing raid zones and their weekly clear requirements. Officers manage this via `/setattendance` or by editing `config.yaml` directly.
 
@@ -222,6 +237,7 @@ attendance:
 | `/attendance <character> [weeks]` | All | Per-player raid attendance report |
 | `/attendancereport [weeks]` | All | Guild-wide attendance summary |
 | `/setattendance add/remove/update/list` | Officers only | Manage attendance requirements |
+| `/gearcheck <log_url>` | All | Check gear readiness from a raid report |
 
 ## Running Tests
 
@@ -229,7 +245,7 @@ attendance:
 pytest
 ```
 
-All 51 tests should pass. Tests use mocked WCL API responses — no real credentials needed.
+All 67 tests should pass. Tests use mocked WCL API responses — no real credentials needed.
 
 ## Running the Bot
 
@@ -259,3 +275,4 @@ python -m src.bot
 11. **Consumables fetched from report actors** — `/raidrecap` and `/player` (with `log_url`) use `get_report_players()` to look up source IDs and `get_report_timerange()` for the full report window before querying consumable data. The consumables block is wrapped in `try/except` so failures never surface to the user.
 12. **`_format_consumables` and `_extract_report_code` live in `raidrecap.py`** — `/player` imports them from there at call time to avoid circular imports.
 13. **Attendance is informational only** — Attendance tracking does not affect player scores. It is a separate reporting tool for officers to monitor raid participation. WCL reports are grouped by ISO week (Monday–Sunday) and compared against per-zone weekly requirements.
+14. **Gear data is per-report snapshot** — Gear check uses the equipment snapshot stored in WarcraftLogs reports, not live Armory data. This means it reflects what players actually wore during the raid, not what they have equipped now.

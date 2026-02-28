@@ -71,6 +71,13 @@ Manage raid attendance requirements. Add or remove zones, update the required nu
 /setattendance list
 ```
 
+### `/gearcheck <log_url>`
+Checks gear readiness for all players in a WarcraftLogs report. Flags players with low-quality items, missing enchants, empty gem sockets, or low average item level.
+
+```
+/gearcheck https://www.warcraftlogs.com/reports/ABC12345
+```
+
 ## Consumables Tracking
 
 All specs have `consumables_weight: 0.00` by default — consumables are shown as **informational only** and do not affect scores. To enable scoring, raise `consumables_weight` (and lower `parse_weight` by the same amount) so all three weights still sum to `1.0`.
@@ -111,6 +118,34 @@ Attendance is **informational only** — it does not affect player scores.
 
 See the **TBC Zone IDs** table below for zone IDs as the guild progresses through content.
 
+## Gear Check
+
+The bot can audit player gear directly from WarcraftLogs report data. Gear snapshots are pulled from the report itself (not the live Armory), so they reflect what players actually wore during the raid.
+
+**What it checks:**
+
+| Check | Description |
+|---|---|
+| Item quality | Flags items below the minimum quality threshold (default: Rare/Blue) |
+| Enchants | Flags missing enchants on enchantable slots (head, shoulders, chest, etc.) |
+| Gem sockets | Flags empty gem sockets |
+| Average item level | Flags players below the minimum average ilvl (default: 100) |
+
+**How to use it:**
+- `/gearcheck <log_url>` — standalone gear audit for an entire raid
+- `/raidrecap <log_url>` — also includes a gear summary alongside performance scores
+
+**Configuring thresholds** in `config.yaml`:
+
+```yaml
+gear_check:
+  min_avg_ilvl: 100        # minimum average item level
+  min_quality: 3           # 2=green, 3=blue, 4=epic
+  check_enchants: true     # toggle enchant validation
+  check_gems: true         # toggle gem validation
+  enchant_slots: [0, 1, 2, 4, 5, 6, 7, 8, 9, 14, 15]  # WoW slot IDs to check for enchants
+```
+
 ## Updating Config
 
 Use `/setconfig` in Discord, or edit `config.yaml` directly and restart the bot.
@@ -144,4 +179,4 @@ Update this as the guild progresses through content:
 pytest
 ```
 
-All 51 tests should pass. No real credentials needed — all WCL API responses are mocked.
+All 67 tests should pass. No real credentials needed — all WCL API responses are mocked.
