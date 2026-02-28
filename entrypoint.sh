@@ -25,4 +25,4 @@ fi
 
 # --- Start the bot ---
 echo "Starting WarcraftLogs bot..."
-exec python -m src.bot
+exec python -m src
