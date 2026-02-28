@@ -88,6 +88,27 @@ async def raidrecap(interaction: discord.Interaction, log_url: str):
         except Exception:
             pass  # Consumables are informational — don't fail the whole command
 
+    # Fetch and display gear issues
+    gear_config = bot.config.get_gear_check()
+    try:
+        players_gear = await bot.wcl.get_report_gear(report_code)
+        if players_gear:
+            from src.gear.checker import check_raid_gear
+            flagged = check_raid_gear(players_gear, gear_config)
+            if flagged:
+                gear_parts = []
+                for player in flagged:
+                    issue_count = len(player["issues"])
+                    ilvl_note = f", avg ilvl {player['avg_ilvl']:.0f}" if not player["ilvl_ok"] else ""
+                    gear_parts.append(f"**{player['name']}** ({issue_count} issue{'s' if issue_count != 1 else ''}{ilvl_note})")
+                embed.add_field(
+                    name="Gear Issues",
+                    value=", ".join(gear_parts),
+                    inline=False,
+                )
+    except Exception:
+        pass  # Gear check is informational — don't fail the whole command
+
     embed.set_footer(text=f"Report: {report_code}")
     await interaction.followup.send(embed=embed)
 
