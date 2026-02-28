@@ -1,5 +1,10 @@
+import logging
+import os
+
 import yaml
 from typing import Optional
+
+logger = logging.getLogger(__name__)
 
 _GEAR_CHECK_DEFAULTS = {
     "min_avg_ilvl": 100,
@@ -13,6 +18,9 @@ _GEAR_CHECK_DEFAULTS = {
 class ConfigLoader:
     def __init__(self, path: str = "config.yaml"):
         self._path = path
+        self._s3_bucket = os.environ.get("CONFIG_S3_BUCKET")
+        if self._s3_bucket:
+            self._sync_from_s3()
         self._data = self._load()
 
     def _load(self) -> dict:
@@ -90,3 +98,25 @@ class ConfigLoader:
     def _save(self) -> None:
         with open(self._path, "w") as f:
             yaml.dump(self._data, f, default_flow_style=False, sort_keys=False)
+        if self._s3_bucket:
+            self._sync_to_s3()
+
+    def _sync_to_s3(self) -> None:
+        """Upload config.yaml to S3 bucket for persistence across deploys."""
+        try:
+            import boto3
+            s3 = boto3.client("s3")
+            s3.upload_file(self._path, self._s3_bucket, "config.yaml")
+            logger.info("Uploaded config to s3://%s/config.yaml", self._s3_bucket)
+        except Exception:
+            logger.warning("Failed to upload config to S3", exc_info=True)
+
+    def _sync_from_s3(self) -> None:
+        """Download config.yaml from S3 bucket (graceful if missing)."""
+        try:
+            import boto3
+            s3 = boto3.client("s3")
+            s3.download_file(self._s3_bucket, "config.yaml", self._path)
+            logger.info("Downloaded config from s3://%s/config.yaml", self._s3_bucket)
+        except Exception:
+            logger.info("No config found in S3 (first deploy?), using local file", exc_info=True)

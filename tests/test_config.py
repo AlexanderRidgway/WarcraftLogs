@@ -1,5 +1,6 @@
 import pytest
 import yaml
+from unittest.mock import patch, MagicMock
 from src.config.loader import ConfigLoader
 
 SAMPLE_CONFIG = {
@@ -243,3 +244,79 @@ def test_all_specs_excludes_gear_check_key(config_file_with_gear_check):
     specs = loader.all_specs()
     assert "gear_check" not in specs
     assert "warrior:protection" in specs
+
+
+def test_save_calls_sync_to_s3_when_bucket_set(config_file, monkeypatch):
+    """_save() should call _sync_to_s3() when CONFIG_S3_BUCKET is set."""
+    monkeypatch.setenv("CONFIG_S3_BUCKET", "my-bucket")
+    loader = ConfigLoader(config_file)
+    with patch.object(loader, "_sync_to_s3") as mock_sync:
+        loader.update_target("warrior:protection", "sunder_armor_uptime", 95)
+        mock_sync.assert_called_once()
+
+
+def test_save_skips_s3_when_no_bucket(config_file, monkeypatch):
+    """_save() should not attempt S3 when CONFIG_S3_BUCKET is not set."""
+    monkeypatch.delenv("CONFIG_S3_BUCKET", raising=False)
+    loader = ConfigLoader(config_file)
+    with patch.object(loader, "_sync_to_s3") as mock_sync:
+        loader.update_target("warrior:protection", "sunder_armor_uptime", 95)
+        mock_sync.assert_not_called()
+
+
+def test_init_calls_sync_from_s3_when_bucket_set(config_file, monkeypatch):
+    """__init__ should attempt S3 download when CONFIG_S3_BUCKET is set."""
+    monkeypatch.setenv("CONFIG_S3_BUCKET", "my-bucket")
+    with patch("src.config.loader.ConfigLoader._sync_from_s3") as mock_sync:
+        ConfigLoader(config_file)
+        mock_sync.assert_called_once()
+
+
+def test_init_skips_s3_when_no_bucket(config_file, monkeypatch):
+    """__init__ should skip S3 when CONFIG_S3_BUCKET is not set."""
+    monkeypatch.delenv("CONFIG_S3_BUCKET", raising=False)
+    with patch("src.config.loader.ConfigLoader._sync_from_s3") as mock_sync:
+        ConfigLoader(config_file)
+        mock_sync.assert_not_called()
+
+
+def test_sync_to_s3_uploads_file(config_file, monkeypatch):
+    """_sync_to_s3() should upload config.yaml to the S3 bucket."""
+    monkeypatch.setenv("CONFIG_S3_BUCKET", "my-bucket")
+    mock_client = MagicMock()
+    with patch("boto3.client", return_value=mock_client):
+        loader = ConfigLoader(config_file)
+        loader._sync_to_s3()
+        mock_client.upload_file.assert_called_once_with(
+            config_file, "my-bucket", "config.yaml"
+        )
+
+
+def test_sync_from_s3_downloads_file(config_file, monkeypatch):
+    """_sync_from_s3() should download config.yaml from the S3 bucket."""
+    monkeypatch.setenv("CONFIG_S3_BUCKET", "my-bucket")
+    mock_client = MagicMock()
+    with patch("boto3.client", return_value=mock_client):
+        loader = ConfigLoader.__new__(ConfigLoader)
+        loader._path = config_file
+        loader._s3_bucket = "my-bucket"
+        loader._sync_from_s3()
+        mock_client.download_file.assert_called_once_with(
+            "my-bucket", "config.yaml", config_file
+        )
+
+
+def test_sync_from_s3_graceful_on_error(config_file, monkeypatch):
+    """_sync_from_s3() should not crash if S3 download fails (first deploy)."""
+    monkeypatch.setenv("CONFIG_S3_BUCKET", "my-bucket")
+    mock_client = MagicMock()
+    from botocore.exceptions import ClientError
+    mock_client.download_file.side_effect = ClientError(
+        {"Error": {"Code": "404", "Message": "Not Found"}}, "GetObject"
+    )
+    with patch("boto3.client", return_value=mock_client):
+        loader = ConfigLoader.__new__(ConfigLoader)
+        loader._path = config_file
+        loader._s3_bucket = "my-bucket"
+        # Should not raise
+        loader._sync_from_s3()
