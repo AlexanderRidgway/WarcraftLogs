@@ -547,4 +547,4 @@ gear_check:
   min_quality: 3
   check_enchants: true
   check_gems: true
-  enchant_slots: [0, 1, 2, 4, 5, 6, 7, 8, 9, 14, 15]
+  enchant_slots: [0, 2, 4, 6, 7, 8, 9, 14, 15]
