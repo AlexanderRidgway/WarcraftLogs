@@ -282,9 +282,8 @@ class WarcraftLogsClient:
     async def get_report_rankings(self, report_code: str) -> list:
         """Fetch per-player rankings for all fights in a report.
 
-        Returns a flat list of player entries, each with:
-        name, class, spec, rankPercent, encounter (from the fight).
-        A player appears once per fight they participated in.
+        Returns one entry per player with their average rankPercent
+        across all boss fights: {name, class, spec, rankPercent}.
         """
         gql = """
         query($code: String!) {
@@ -303,23 +302,32 @@ class WarcraftLogsClient:
         if not rankings_data:
             return []
 
-        # Flatten the per-fight, per-role structure into a flat player list
-        flat = []
+        # Collect per-fight parses per player, then average
+        player_parses: dict[str, list[float]] = {}
+        player_info: dict[str, dict] = {}
         for fight in rankings_data.get("data", []):
-            encounter_name = fight.get("encounter", {}).get("name", "Unknown")
             roles = fight.get("roles", {})
             for role_data in roles.values():
                 if not isinstance(role_data, dict):
                     continue
                 for char in role_data.get("characters", []):
-                    flat.append({
-                        "name": char.get("name", "Unknown"),
-                        "class": char.get("class", ""),
-                        "spec": char.get("spec", ""),
-                        "rankPercent": char.get("rankPercent", 0),
-                        "encounter": encounter_name,
-                    })
-        return flat
+                    name = char.get("name", "Unknown")
+                    player_parses.setdefault(name, []).append(char.get("rankPercent", 0))
+                    if name not in player_info:
+                        player_info[name] = {
+                            "class": char.get("class", ""),
+                            "spec": char.get("spec", ""),
+                        }
+
+        return [
+            {
+                "name": name,
+                "class": player_info[name]["class"],
+                "spec": player_info[name]["spec"],
+                "rankPercent": sum(parses) / len(parses),
+            }
+            for name, parses in player_parses.items()
+        ]
 
     async def get_report_players(self, report_code: str) -> list:
         """Return all player actors in a report as [{id, name}]."""
