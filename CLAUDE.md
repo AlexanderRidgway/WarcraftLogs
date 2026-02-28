@@ -37,11 +37,11 @@ WarcraftLogs/
 │       └── engine.py           # score_player(), score_consistency(), aggregate_weekly_scores()
 ├── tests/
 │   ├── test_api.py             # 15 tests — OAuth2, roster, rankings, utility, spell_ids, report players/timerange, guild_reports, report_gear
-│   ├── test_config.py          # 19 tests — load, get_spec, update_target, get_consumables, all_specs, attendance CRUD
+│   ├── test_config.py          # 22 tests — load, get_spec, update_target, get_consumables, all_specs, attendance CRUD, gear_check
 │   ├── test_scoring.py         # 15 tests — weighted scoring, consumables_weight, optional flag, aggregate_weekly_scores
 │   ├── test_attendance.py      # 7 tests — group_reports_by_week, check_player_attendance
 │   ├── test_gear.py            # 11 tests — gear quality, enchant, gem, ilvl checks
-│   ├── test_weeklyrecap.py      # 3 tests — week range calculation
+│   └── test_weeklyrecap.py      # 3 tests — week range calculation
 ├── config.yaml                 # Officer-maintained class:spec profiles
 ├── .env.example                # Template for required environment variables
 ├── requirements.txt            # Python dependencies
