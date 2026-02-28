@@ -8,6 +8,7 @@ from dotenv import load_dotenv
 from src.api.warcraftlogs import WarcraftLogsClient
 from src.config.loader import ConfigLoader
 
+logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 load_dotenv()
