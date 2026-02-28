@@ -15,7 +15,7 @@ data "aws_ami" "amazon_linux" {
 
 resource "aws_security_group" "bot" {
   name        = "${var.project_name}-sg"
-  description = "Security group for WarcraftLogs bot — egress only"
+  description = "Security group for WarcraftLogs bot - egress only"
 
   egress {
     from_port   = 0
