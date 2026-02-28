@@ -517,3 +517,21 @@ consumables:
     type: count
     target: 3
     optional: true
+
+# ──────────────────────────────────────────────
+# ATTENDANCE REQUIREMENTS
+# Officers can add/remove zones as the guild progresses.
+# required_per_week: how many clears of this zone are expected per week.
+# Use /setattendance in Discord to manage, or edit this file directly.
+# ──────────────────────────────────────────────
+
+attendance:
+  - zone_id: 1002
+    label: "Karazhan"
+    required_per_week: 1
+  - zone_id: 1004
+    label: "Gruul's Lair"
+    required_per_week: 1
+  - zone_id: 1005
+    label: "Magtheridon's Lair"
+    required_per_week: 1
