@@ -526,14 +526,11 @@ consumables:
 # ──────────────────────────────────────────────
 
 attendance:
-  - zone_id: 1002
+  - zone_id: 1047
     label: "Karazhan"
     required_per_week: 1
-  - zone_id: 1004
-    label: "Gruul's Lair"
-    required_per_week: 1
-  - zone_id: 1005
-    label: "Magtheridon's Lair"
+  - zone_id: 1048
+    label: "Gruul/Magtheridon"
     required_per_week: 1
 
 # ──────────────────────────────────────────────

@@ -41,9 +41,10 @@ def check_player_attendance(
         for req in requirements:
             zone_id = req["zone_id"]
             required = req["required_per_week"]
+            player_lower = player_name.lower()
             count = sum(
                 1 for r in week_reports
-                if r["zone"]["id"] == zone_id and player_name in r["players"]
+                if r["zone"]["id"] == zone_id and player_lower in [p.lower() for p in r["players"]]
             )
             met = count >= required
             if met:

@@ -150,19 +150,29 @@ class WarcraftLogsClient:
           }
         }
         """
-        result = await self.query(gql, {
+        variables = {
             "name": name,
             "serverSlug": server_slug,
             "serverRegion": region,
             "zoneID": zone_id,
-        })
+        }
+        result = await self.query(gql, variables)
+        logger.info("get_character_rankings(%s, %s, %s, zone=%s) raw response: %s",
+                     name, server_slug, region, zone_id, result)
         char = result["data"]["characterData"]["character"]
         if char is None:
+            logger.warning("Character not found: %s-%s (%s)", name, server_slug, region)
             return []
         zone = char.get("zoneRankings")
         if zone is None:
+            logger.warning("No zoneRankings for %s-%s zone %d: char keys=%s",
+                           name, server_slug, zone_id, list(char.keys()))
             return []
-        return zone["rankings"]
+        rankings = zone.get("rankings", [])
+        if not rankings:
+            logger.warning("zoneRankings empty for %s-%s zone %d: zone data=%s",
+                           name, server_slug, zone_id, zone)
+        return rankings
 
     @staticmethod
     def _contrib_matches(entry: dict, contrib: dict) -> bool:
