@@ -58,3 +58,75 @@ async def attendance_cmd(interaction: discord.Interaction, character: str, weeks
     embed.set_footer(text=f"Attendance Rate: {pct:.1f}% ({total_attended}/{total_required})")
 
     await interaction.followup.send(embed=embed)
+
+
+@bot.tree.command(name="attendancereport", description="Show guild-wide raid attendance")
+@app_commands.describe(weeks="Number of recent weeks to check (default: 4)")
+async def attendancereport_cmd(interaction: discord.Interaction, weeks: int = 4):
+    await interaction.response.defer()
+
+    requirements = bot.config.get_attendance()
+    if not requirements:
+        await interaction.followup.send("No attendance requirements configured. Use `/setattendance add` to set them up.")
+        return
+
+    now_ms = int(time.time() * 1000)
+    start_ms = now_ms - (weeks * 7 * 24 * 60 * 60 * 1000)
+
+    try:
+        reports = await bot.wcl.get_guild_reports(GUILD_NAME, GUILD_SERVER, GUILD_REGION, start_ms, now_ms)
+    except Exception:
+        await interaction.followup.send("Failed to fetch guild reports from WarcraftLogs.")
+        return
+
+    if not reports:
+        await interaction.followup.send(f"No raid data found for the last {weeks} weeks.")
+        return
+
+    # Collect all unique player names across reports
+    all_players = set()
+    for report in reports:
+        all_players.update(report["players"])
+
+    # Check each player's attendance
+    missed_players = []
+    perfect_count = 0
+
+    for player_name in sorted(all_players):
+        result = check_player_attendance(player_name, reports, requirements)
+        total_attended = sum(w["attended"] for w in result)
+        total_required = sum(w["required"] for w in result)
+
+        if total_attended >= total_required:
+            perfect_count += 1
+        else:
+            missed = []
+            for week in result:
+                for z in week["zones"]:
+                    if not z["met"]:
+                        missed.append(f"{z['label']} wk {week['week_start']}")
+            missed_players.append((player_name, total_required - total_attended, missed))
+
+    missed_players.sort(key=lambda x: x[1], reverse=True)
+
+    embed = discord.Embed(
+        title=f"Guild Attendance Report (last {weeks} weeks)",
+        color=discord.Color.gold(),
+    )
+
+    lines = []
+    for name, miss_count, details in missed_players:
+        detail_str = ", ".join(details[:5])
+        if len(details) > 5:
+            detail_str += f" +{len(details) - 5} more"
+        lines.append(f"\u274c **{name}** — missed {miss_count} ({detail_str})")
+
+    if lines:
+        embed.description = "\n".join(lines)
+    else:
+        embed.description = "Everyone has perfect attendance!"
+
+    if perfect_count > 0:
+        embed.set_footer(text=f"\u2705 {perfect_count} player(s) with perfect attendance")
+
+    await interaction.followup.send(embed=embed)
