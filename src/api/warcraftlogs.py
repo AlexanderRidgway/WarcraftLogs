@@ -6,13 +6,14 @@ from typing import Optional
 logger = logging.getLogger(__name__)
 
 TOKEN_URL = "https://www.warcraftlogs.com/oauth/token"
-API_URL = "https://www.warcraftlogs.com/api/v2/client"
+DEFAULT_API_URL = "https://www.warcraftlogs.com/api/v2/client"
 
 
 class WarcraftLogsClient:
-    def __init__(self, client_id: str, client_secret: str):
+    def __init__(self, client_id: str, client_secret: str, api_url: str = DEFAULT_API_URL):
         self._client_id = client_id
         self._client_secret = client_secret
+        self._api_url = api_url
         self._token: Optional[str] = None
         self._token_expiry: float = 0
 
@@ -42,7 +43,7 @@ class WarcraftLogsClient:
 
         async with aiohttp.ClientSession() as session:
             async with session.post(
-                API_URL,
+                self._api_url,
                 json=payload,
                 headers={"Authorization": f"Bearer {token}"},
             ) as resp:
