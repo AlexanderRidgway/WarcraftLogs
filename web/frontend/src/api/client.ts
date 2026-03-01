@@ -41,6 +41,7 @@ export const api = {
     trends: (name: string, weeks = 8) => fetchJson<import('./types').TrendPoint[]>(`/players/${name}/trends?weeks=${weeks}`),
   },
   leaderboard: (weeks = 4) => fetchJson<import('./types').LeaderboardEntry[]>(`/leaderboard?weeks=${weeks}`),
+  mvp: (weeksAgo = 0) => fetchJson<import('./types').MvpEntry | null>(`/mvp?weeks_ago=${weeksAgo}`),
   reports: {
     list: () => fetchJson<import('./types').ReportSummary[]>('/reports'),
     get: (code: string) => fetchJson<import('./types').ReportDetail>(`/reports/${code}`),

@@ -130,3 +130,15 @@ export interface TrendPoint {
   utility_score: number | null
   consumables_score: number | null
 }
+
+export interface MvpEntry {
+  name: string
+  class_name: string
+  spec: string
+  overall_score: number
+  parse_score: number
+  utility_score: number | null
+  consumables_score: number | null
+  fight_count: number
+  week_start: string
+}
