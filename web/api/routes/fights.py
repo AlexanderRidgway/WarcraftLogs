@@ -1,5 +1,4 @@
 import logging
-import os
 
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy import func, select
@@ -122,82 +121,6 @@ async def list_report_fights(code: str, db: AsyncSession = Depends(get_db)):
         }
         for f in fights
     ]
-
-
-@router.get("/{code}/debug-wcl")
-async def debug_wcl_fights(code: str, db: AsyncSession = Depends(get_db)):
-    """Debug endpoint: test WCL API calls for deaths and fight stats."""
-    from src.api.warcraftlogs import WarcraftLogsClient
-
-    client_id = os.environ.get("WARCRAFTLOGS_CLIENT_ID", "")
-    client_secret = os.environ.get("WARCRAFTLOGS_CLIENT_SECRET", "")
-    if not client_id or not client_secret:
-        return {"error": "WCL credentials not configured"}
-
-    wcl = WarcraftLogsClient(client_id, client_secret)
-
-    # Get first fight from DB
-    fight_result = await db.execute(
-        select(Fight).where(Fight.report_code == code).order_by(Fight.start_time).limit(1)
-    )
-    fight = fight_result.scalar_one_or_none()
-    if not fight:
-        return {"error": "No fights in DB for this report"}
-
-    result = {
-        "fight": {
-            "fight_id": fight.fight_id,
-            "encounter_name": fight.encounter_name,
-            "start_time": fight.start_time,
-            "end_time": fight.end_time,
-            "duration_ms": fight.duration_ms,
-        },
-        "db_death_count": 0,
-        "db_stats_count": 0,
-    }
-
-    # Check DB counts
-    death_count = await db.execute(
-        select(func.count(Death.id)).where(Death.fight_db_id == fight.id)
-    )
-    result["db_death_count"] = death_count.scalar() or 0
-
-    stats_count = await db.execute(
-        select(func.count(FightPlayerStats.id)).where(FightPlayerStats.fight_db_id == fight.id)
-    )
-    result["db_stats_count"] = stats_count.scalar() or 0
-
-    # Test raw WCL table API for DamageDone
-    try:
-        raw_dmg = await wcl._query_table(code, None, fight.start_time, fight.end_time, "DamageDone")
-        result["wcl_raw_dmg_keys"] = list(raw_dmg.keys()) if isinstance(raw_dmg, dict) else str(type(raw_dmg))
-        entries = raw_dmg.get("entries", [])
-        result["wcl_raw_dmg_entry_count"] = len(entries)
-        result["wcl_raw_dmg_sample"] = entries[:2] if entries else []
-    except Exception as e:
-        result["wcl_raw_dmg_error"] = str(e)
-
-    # Test raw WCL table API for Deaths
-    try:
-        raw_deaths = await wcl._query_table(code, None, fight.start_time, fight.end_time, "Deaths")
-        result["wcl_raw_deaths_keys"] = list(raw_deaths.keys()) if isinstance(raw_deaths, dict) else str(type(raw_deaths))
-        entries = raw_deaths.get("entries", [])
-        result["wcl_raw_deaths_entry_count"] = len(entries)
-        result["wcl_raw_deaths_sample"] = entries[:2] if entries else []
-    except Exception as e:
-        result["wcl_raw_deaths_error"] = str(e)
-
-    # Also test with full report time range (0 to big number) like Summary does
-    try:
-        raw_dmg_full = await wcl._query_table(code, None, 0, 999999999999, "DamageDone")
-        entries = raw_dmg_full.get("entries", [])
-        result["wcl_full_report_dmg_count"] = len(entries)
-        result["wcl_full_report_dmg_types"] = list({e.get("type") for e in entries[:20]})
-        result["wcl_full_report_dmg_sample"] = entries[:2] if entries else []
-    except Exception as e:
-        result["wcl_full_report_dmg_error"] = str(e)
-
-    return result
 
 
 @router.get("/{code}/fights/{fight_id}")
