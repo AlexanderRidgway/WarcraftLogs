@@ -167,21 +167,35 @@ async def debug_wcl_fights(code: str, db: AsyncSession = Depends(get_db)):
     )
     result["db_stats_count"] = stats_count.scalar() or 0
 
-    # Test WCL deaths API
+    # Test raw WCL table API for DamageDone
     try:
-        death_entries = await wcl.get_report_deaths(code, fight.start_time, fight.end_time)
-        result["wcl_deaths_raw_count"] = len(death_entries)
-        result["wcl_deaths_sample"] = death_entries[:2] if death_entries else []
+        raw_dmg = await wcl._query_table(code, None, fight.start_time, fight.end_time, "DamageDone")
+        result["wcl_raw_dmg_keys"] = list(raw_dmg.keys()) if isinstance(raw_dmg, dict) else str(type(raw_dmg))
+        entries = raw_dmg.get("entries", [])
+        result["wcl_raw_dmg_entry_count"] = len(entries)
+        result["wcl_raw_dmg_sample"] = entries[:2] if entries else []
     except Exception as e:
-        result["wcl_deaths_error"] = str(e)
+        result["wcl_raw_dmg_error"] = str(e)
 
-    # Test WCL fight stats API
+    # Test raw WCL table API for Deaths
     try:
-        stats = await wcl.get_fight_stats(code, fight.start_time, fight.end_time)
-        result["wcl_stats_player_count"] = len(stats)
-        result["wcl_stats_sample"] = {k: v for k, v in list(stats.items())[:2]}
+        raw_deaths = await wcl._query_table(code, None, fight.start_time, fight.end_time, "Deaths")
+        result["wcl_raw_deaths_keys"] = list(raw_deaths.keys()) if isinstance(raw_deaths, dict) else str(type(raw_deaths))
+        entries = raw_deaths.get("entries", [])
+        result["wcl_raw_deaths_entry_count"] = len(entries)
+        result["wcl_raw_deaths_sample"] = entries[:2] if entries else []
     except Exception as e:
-        result["wcl_stats_error"] = str(e)
+        result["wcl_raw_deaths_error"] = str(e)
+
+    # Also test with full report time range (0 to big number) like Summary does
+    try:
+        raw_dmg_full = await wcl._query_table(code, None, 0, 999999999999, "DamageDone")
+        entries = raw_dmg_full.get("entries", [])
+        result["wcl_full_report_dmg_count"] = len(entries)
+        result["wcl_full_report_dmg_types"] = list({e.get("type") for e in entries[:20]})
+        result["wcl_full_report_dmg_sample"] = entries[:2] if entries else []
+    except Exception as e:
+        result["wcl_full_report_dmg_error"] = str(e)
 
     return result
 
