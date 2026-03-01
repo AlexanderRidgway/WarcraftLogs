@@ -347,22 +347,22 @@ warlock:affliction:
   parse_weight: 0.55
   consumables_weight: 0.00
   contributions:
-    - metric: curse_of_elements_uptime
-      label: "Curse of Elements"
-      spell_id: 27228
-      type: uptime
-      target: 90
+    - metric: curse_count
+      label: "Curse (any)"
+      spell_ids: [27228, 27218, 30910, 27226, 11719, 30909]
+      type: count
+      target: 3
 
 warlock:destruction:
   utility_weight: 0.30
   parse_weight: 0.70
   consumables_weight: 0.00
   contributions:
-    - metric: curse_of_elements_uptime
-      label: "Curse of Elements"
-      spell_id: 27228
-      type: uptime
-      target: 90
+    - metric: curse_count
+      label: "Curse (any)"
+      spell_ids: [27228, 27218, 30910, 27226, 11719, 30909]
+      type: count
+      target: 3
 
 # ──────────────────────────────────────────────
 # PRIEST

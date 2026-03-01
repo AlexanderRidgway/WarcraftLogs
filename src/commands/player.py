@@ -1,13 +1,13 @@
 import discord
 from discord import app_commands
-from src.bot import bot, is_officer, GUILD_REGION, ZONE_IDS
+from src.bot import bot, is_officer, GUILD_REGION, GUILD_SERVER, ZONE_IDS
 from src.scoring.engine import score_player, score_consistency
 from src.commands.topconsistent import _class_id_to_name
 
 
 @bot.tree.command(name="player", description="Show a player's parse and utility breakdown")
 @app_commands.describe(
-    character="Character name (e.g. Thrallbro-Stormrage)",
+    character="Character name (e.g. Haydumbwl). Server defaults to guild server.",
     log_url="(Optional) WarcraftLogs report URL to include consumable usage",
 )
 async def player_cmd(interaction: discord.Interaction, character: str, log_url: str = None):
@@ -28,7 +28,7 @@ async def player_cmd(interaction: discord.Interaction, character: str, log_url: 
     for zone_id in ZONE_IDS:
         try:
             zone_rankings = await bot.wcl.get_character_rankings(
-                name, server_slug or "unknown", GUILD_REGION, zone_id
+                name, server_slug or GUILD_SERVER, GUILD_REGION, zone_id
             )
             rankings.extend(zone_rankings)
         except Exception:

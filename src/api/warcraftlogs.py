@@ -252,8 +252,8 @@ class WarcraftLogsClient:
             cast_data = await self._query_table(report_code, source_id, start, end, "Casts")
             entries = cast_data.get("entries", [])
             for contrib in count_contribs:
-                match = next((e for e in entries if self._contrib_matches(e, contrib)), None)
-                result[contrib["metric"]] = match["total"] if match else 0
+                total = sum(e["total"] for e in entries if self._contrib_matches(e, contrib))
+                result[contrib["metric"]] = total
 
         return result
 
