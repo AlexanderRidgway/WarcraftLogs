@@ -242,9 +242,10 @@ class WarcraftLogsClient:
                     total_time = buff_data.get("totalTime", 1)
 
             for contrib in uptime_contribs:
-                match = next((a for a in all_auras if self._contrib_matches(a, contrib)), None)
-                if match:
-                    result[contrib["metric"]] = (match["totalUptime"] / total_time) * 100
+                matches = [a for a in all_auras if self._contrib_matches(a, contrib)]
+                if matches:
+                    best = max(m["totalUptime"] for m in matches)
+                    result[contrib["metric"]] = (best / total_time) * 100
                 else:
                     result[contrib["metric"]] = 0.0
 

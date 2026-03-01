@@ -36,15 +36,15 @@ warrior:fury:
   parse_weight: 0.60
   consumables_weight: 0.00
   contributions:
-    - metric: battle_shout_uptime
-      label: "Battle Shout"
-      spell_id: 6673
-      type: uptime
+    - metric: shout_count
+      label: "Shout (any)"
+      spell_ids: [6673, 469, 2048, 25289]
+      type: count
       subtype: buff
-      target: 95
+      target: 3
     - metric: demoralizing_shout_uptime
       label: "Demo Shout"
-      spell_id: 25203
+      spell_ids: [25203, 11556, 11555, 1160]
       type: uptime
       target: 75
 
@@ -53,15 +53,15 @@ warrior:arms:
   parse_weight: 0.70
   consumables_weight: 0.00
   contributions:
-    - metric: battle_shout_uptime
-      label: "Battle Shout"
-      spell_id: 6673
-      type: uptime
+    - metric: shout_count
+      label: "Shout (any)"
+      spell_ids: [6673, 469, 2048, 25289]
+      type: count
       subtype: buff
-      target: 95
+      target: 3
     - metric: demoralizing_shout_uptime
       label: "Demo Shout"
-      spell_id: 25203
+      spell_ids: [25203, 11556, 11555, 1160]
       type: uptime
       target: 75
 
@@ -101,12 +101,11 @@ paladin:protection:
       spell_id: 20271
       type: count
       target: 20
-    - metric: blessing_of_kings_uptime
-      label: "Blessing of Kings"
-      spell_id: 20217
-      type: uptime
-      subtype: buff
-      target: 90
+    - metric: blessing_count
+      label: "Blessing (any)"
+      spell_ids: [25291, 20217, 27143, 1038, 27144, 27168, 25916, 25898, 27145, 25895, 25899]
+      type: count
+      target: 3
     - metric: cleanse_count
       label: "Cleanse"
       spell_id: 4987
@@ -123,12 +122,11 @@ paladin:retribution:
       spell_id: 20271
       type: count
       target: 20
-    - metric: blessing_of_might_uptime
-      label: "Blessing of Might"
-      spell_id: 25291
-      type: uptime
-      subtype: buff
-      target: 90
+    - metric: blessing_count
+      label: "Blessing (any)"
+      spell_ids: [25291, 20217, 27143, 1038, 27144, 27168, 25916, 25898, 27145, 25895, 25899]
+      type: count
+      target: 3
 
 # ──────────────────────────────────────────────
 # ROGUE

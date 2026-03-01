@@ -19,10 +19,10 @@ type RoleFilter = 'all' | 'tank' | 'healer' | 'caster' | 'physical'
 
 const MEDAL = ['', '\u{1F947}', '\u{1F948}', '\u{1F949}']
 
-const TANK_SPECS = ['warrior:protection', 'paladin:protection', 'druid:feral']
+const TANK_SPECS = ['warrior:protection', 'warrior:gladiator', 'paladin:protection', 'paladin:justicar', 'druid:feral', 'druid:guardian']
 const HEALER_SPECS = ['paladin:holy', 'priest:holy', 'priest:discipline', 'shaman:restoration', 'druid:restoration']
 const CASTER_SPECS = ['mage:arcane', 'mage:fire', 'mage:frost', 'warlock:affliction', 'warlock:destruction', 'warlock:demonology', 'priest:shadow', 'shaman:elemental', 'druid:balance']
-const PHYSICAL_SPECS = ['warrior:fury', 'warrior:arms', 'rogue:combat', 'rogue:assassination', 'hunter:beast mastery', 'hunter:survival', 'hunter:marksmanship', 'shaman:enhancement', 'paladin:retribution']
+const PHYSICAL_SPECS = ['warrior:fury', 'warrior:arms', 'rogue:combat', 'rogue:assassination', 'hunter:beastmastery', 'hunter:beast mastery', 'hunter:survival', 'hunter:marksmanship', 'shaman:enhancement', 'paladin:retribution']
 
 function getRole(spec: string | undefined): RoleFilter {
   if (!spec) return 'physical'
