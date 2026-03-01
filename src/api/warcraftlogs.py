@@ -50,6 +50,22 @@ class WarcraftLogsClient:
                 resp.raise_for_status()
                 return await resp.json()
 
+    async def get_game_classes(self) -> dict[int, str]:
+        """Fetch class ID -> name mapping from WCL gameData."""
+        gql = """
+        query {
+          gameData {
+            classes {
+              id
+              name
+            }
+          }
+        }
+        """
+        result = await self.query(gql, {})
+        classes = result["data"]["gameData"]["classes"]
+        return {c["id"]: c["name"].lower() for c in classes}
+
     async def get_guild_roster(self, guild_name: str, server_slug: str, region: str) -> list:
         """Fetch all members of a guild from WarcraftLogs."""
         gql = """

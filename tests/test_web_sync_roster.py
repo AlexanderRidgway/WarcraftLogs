@@ -9,6 +9,11 @@ def mock_wcl():
         {"name": "Testplayer", "classID": 1, "server": {"slug": "stormrage", "region": {"slug": "us"}}},
         {"name": "Healbot", "classID": 5, "server": {"slug": "stormrage", "region": {"slug": "us"}}},
     ]
+    wcl.get_game_classes.return_value = {
+        1: "warrior", 2: "paladin", 3: "hunter", 4: "rogue",
+        5: "priest", 6: "death knight", 7: "shaman", 8: "mage",
+        9: "warlock", 11: "druid",
+    }
     return wcl
 
 
