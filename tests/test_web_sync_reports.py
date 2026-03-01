@@ -27,6 +27,21 @@ def mock_wcl():
         {"name": "Testplayer", "gear": []},
         {"name": "Healbot", "gear": []},
     ]
+    wcl.get_report_fights.return_value = [
+        {"id": 1, "name": "Gruul", "kill": True, "startTime": 0,
+         "endTime": 180000, "fightPercentage": 0, "encounterID": 649},
+    ]
+    wcl.get_report_deaths.return_value = [
+        {"name": "Testplayer", "type": "Player", "deathTime": 90000,
+         "damage": {"total": 15000, "entries": [
+             {"ability": {"name": "Shatter"}, "amount": 15000}
+         ]}}
+    ]
+    wcl.get_fight_stats.return_value = {
+        "Testplayer": {"damage_done": 216000, "dps": 1200, "healing_done": 0, "hps": 0},
+        "Healbot": {"damage_done": 0, "dps": 0, "healing_done": 300000, "hps": 1666.7},
+    }
+    wcl.get_report_player_specs.return_value = {}
     return wcl
 
 
@@ -77,3 +92,24 @@ async def test_process_report_returns_player_data(mock_wcl):
     assert "scores" in result
     assert "gear" in result
     assert len(result["rankings"]) == 2
+
+
+@pytest.mark.asyncio
+async def test_process_report_includes_fights_and_deaths(mock_wcl):
+    from web.api.sync.reports import process_report
+    from src.config.loader import ConfigLoader
+
+    config = ConfigLoader()
+    result = await process_report(
+        wcl=mock_wcl,
+        report_code="abc123",
+        config=config,
+    )
+    assert "fights" in result
+    assert "deaths" in result
+    assert "fight_stats" in result
+    assert len(result["fights"]) == 1
+    assert result["fights"][0]["encounter_name"] == "Gruul"
+    assert len(result["deaths"]) == 1
+    assert result["deaths"][0]["player_name"] == "Testplayer"
+    assert len(result["fight_stats"]) == 2

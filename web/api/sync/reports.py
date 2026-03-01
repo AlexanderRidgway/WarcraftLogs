@@ -205,10 +205,78 @@ async def process_report(
                 "gems": item.get("gems", []),
             })
 
+    # Fetch fights, deaths, and per-fight stats
+    fights = []
+    deaths = []
+    fight_stats = []
+
+    try:
+        fights_raw = await wcl.get_report_fights(report_code)
+    except Exception:
+        logger.warning("Failed to fetch fights for %s", report_code)
+        fights_raw = []
+
+    for f in fights_raw:
+        if f.get("encounterID", 0) == 0:
+            continue
+        fight_entry = {
+            "report_code": report_code,
+            "fight_id": f["id"],
+            "encounter_name": f.get("name", "Unknown"),
+            "kill": f.get("kill", False),
+            "duration_ms": int(f.get("endTime", 0) - f.get("startTime", 0)),
+            "fight_percentage": f.get("fightPercentage", 0),
+            "start_time": f.get("startTime", 0),
+            "end_time": f.get("endTime", 0),
+        }
+        fights.append(fight_entry)
+
+        # Fetch deaths for this fight
+        try:
+            death_entries = await wcl.get_report_deaths(report_code, f["startTime"], f["endTime"])
+            for d in death_entries:
+                if d.get("type") != "Player":
+                    continue
+                killing_ability = None
+                damage_taken = None
+                if d.get("damage", {}).get("entries"):
+                    last_hit = d["damage"]["entries"][-1]
+                    killing_ability = last_hit.get("ability", {}).get("name")
+                    damage_taken = last_hit.get("amount")
+                deaths.append({
+                    "fight_id": f["id"],
+                    "player_name": d["name"],
+                    "timestamp_ms": d.get("deathTime", 0),
+                    "killing_ability": killing_ability,
+                    "damage_taken": damage_taken,
+                })
+        except Exception:
+            logger.warning("Failed to fetch deaths for fight %s in %s", f["id"], report_code)
+
+        # Fetch per-player stats for this fight
+        try:
+            stats = await wcl.get_fight_stats(report_code, f["startTime"], f["endTime"])
+            for player_name, s in stats.items():
+                player_deaths = sum(1 for d in deaths if d["fight_id"] == f["id"] and d["player_name"] == player_name)
+                fight_stats.append({
+                    "fight_id": f["id"],
+                    "player_name": player_name,
+                    "dps": s["dps"],
+                    "hps": s["hps"],
+                    "damage_done": s["damage_done"],
+                    "healing_done": s["healing_done"],
+                    "deaths_count": player_deaths,
+                })
+        except Exception:
+            logger.warning("Failed to fetch stats for fight %s in %s", f["id"], report_code)
+
     return {
         "rankings": rankings,
         "scores": scores,
         "gear": gear,
         "utility": utility_entries,
         "consumables": consumables_entries,
+        "fights": fights,
+        "deaths": deaths,
+        "fight_stats": fight_stats,
     }

@@ -16,6 +16,7 @@ from src.config.loader import ConfigLoader
 from web.api.database import async_session
 from web.api.models import Player, Report, Ranking, Score, GearSnapshot
 from web.api.models import UtilityData, ConsumablesData, AttendanceRecord, SyncStatus
+from web.api.models import Fight, Death, FightPlayerStats
 from web.api.sync.roster import sync_roster
 from web.api.sync.reports import fetch_new_reports, process_report
 
@@ -76,6 +77,9 @@ class SyncWorker:
             if force:
                 # Clear all report-related data to re-process from scratch
                 async with async_session() as session:
+                    await session.execute(delete(Death))
+                    await session.execute(delete(FightPlayerStats))
+                    await session.execute(delete(Fight))
                     await session.execute(delete(Ranking))
                     await session.execute(delete(Score))
                     await session.execute(delete(GearSnapshot))
@@ -197,6 +201,42 @@ class SyncWorker:
                         actual_value=c["actual_value"],
                         target_value=c["target_value"],
                         optional=c.get("optional", False),
+                    ))
+
+            # Store fights
+            fight_db_ids = {}
+            for f in processed.get("fights", []):
+                fight = Fight(**f)
+                session.add(fight)
+                await session.flush()
+                fight_db_ids[f["fight_id"]] = fight.id
+
+            # Store deaths
+            for d in processed.get("deaths", []):
+                db_fight_id = fight_db_ids.get(d["fight_id"])
+                player_id = player_ids.get(d["player_name"])
+                if db_fight_id and player_id:
+                    session.add(Death(
+                        fight_db_id=db_fight_id,
+                        player_id=player_id,
+                        timestamp_ms=d["timestamp_ms"],
+                        killing_ability=d.get("killing_ability"),
+                        damage_taken=d.get("damage_taken"),
+                    ))
+
+            # Store fight player stats
+            for s in processed.get("fight_stats", []):
+                db_fight_id = fight_db_ids.get(s["fight_id"])
+                player_id = player_ids.get(s["player_name"])
+                if db_fight_id and player_id:
+                    session.add(FightPlayerStats(
+                        fight_db_id=db_fight_id,
+                        player_id=player_id,
+                        dps=s["dps"],
+                        hps=s["hps"],
+                        damage_done=s["damage_done"],
+                        healing_done=s["healing_done"],
+                        deaths_count=s["deaths_count"],
                     ))
 
             await session.commit()
