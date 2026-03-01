@@ -22,7 +22,7 @@ export default function ParseBar({ percent }: { percent: number }) {
       <div className="w-24 h-2.5 bg-bg-base rounded-full overflow-hidden">
         <div
           className={`h-full rounded-full transition-all duration-500 ${getParseColor(percent)}`}
-          style={{ width: `${Math.min(percent, 100)}%` }}
+          style={{ width: `${Math.max(0, Math.min(percent, 100))}%` }}
         />
       </div>
       <span className={`text-sm font-semibold tabular-nums ${getParseTextColor(percent)}`}>
