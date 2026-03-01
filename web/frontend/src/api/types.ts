@@ -69,7 +69,8 @@ export interface ReportSummary {
 export interface ReportDetail extends ReportSummary {
   player_names: string[]
   scores: {
-    player_id: number
+    player_name: string
+    class_name: string
     spec: string
     overall_score: number
     parse_score: number
@@ -77,7 +78,7 @@ export interface ReportDetail extends ReportSummary {
     consumables_score: number | null
   }[]
   consumables: {
-    player_id: number
+    player_name: string
     metric_name: string
     label: string
     actual_value: number

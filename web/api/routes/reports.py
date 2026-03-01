@@ -3,7 +3,7 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from web.api.database import get_db
-from web.api.models import Report, Score, ConsumablesData
+from web.api.models import Report, Score, ConsumablesData, Player
 
 router = APIRouter(prefix="/api/reports", tags=["reports"])
 
@@ -33,14 +33,19 @@ async def get_report(code: str, db: AsyncSession = Depends(get_db)):
         raise HTTPException(status_code=404, detail="Report not found")
 
     scores_result = await db.execute(
-        select(Score).where(Score.report_code == code).order_by(Score.overall_score.desc())
+        select(Score, Player.name, Player.class_name)
+        .join(Player, Score.player_id == Player.id)
+        .where(Score.report_code == code)
+        .order_by(Score.overall_score.desc())
     )
-    scores = scores_result.scalars().all()
+    scores = scores_result.all()
 
     consumables_result = await db.execute(
-        select(ConsumablesData).where(ConsumablesData.report_code == code)
+        select(ConsumablesData, Player.name)
+        .join(Player, ConsumablesData.player_id == Player.id)
+        .where(ConsumablesData.report_code == code)
     )
-    consumables = consumables_result.scalars().all()
+    consumables = consumables_result.all()
 
     return {
         "code": report.code,
@@ -51,24 +56,25 @@ async def get_report(code: str, db: AsyncSession = Depends(get_db)):
         "player_names": report.player_names,
         "scores": [
             {
-                "player_id": s.player_id,
+                "player_name": name,
+                "class_name": class_name,
                 "spec": s.spec,
                 "overall_score": s.overall_score,
                 "parse_score": s.parse_score,
                 "utility_score": s.utility_score,
                 "consumables_score": s.consumables_score,
             }
-            for s in scores
+            for s, name, class_name in scores
         ],
         "consumables": [
             {
-                "player_id": c.player_id,
+                "player_name": name,
                 "metric_name": c.metric_name,
                 "label": c.label,
                 "actual_value": c.actual_value,
                 "target_value": c.target_value,
                 "optional": c.optional,
             }
-            for c in consumables
+            for c, name in consumables
         ],
     }

@@ -1,8 +1,9 @@
-import { useParams } from 'react-router-dom'
+import { useParams, Link } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
 import { api } from '../api/client'
 import Layout from '../components/Layout'
 import ParseBar from '../components/ParseBar'
+import ClassIcon from '../components/ClassIcon'
 
 export default function RaidDetail() {
   const { code } = useParams<{ code: string }>()
@@ -33,8 +34,12 @@ export default function RaidDetail() {
         <tbody>
           {report.scores?.map((s, i) => (
             <tr key={i} style={{ borderBottom: '1px solid #21262d' }}>
-              <td style={{ padding: '0.5rem' }}>{s.player_id}</td>
-              <td style={{ padding: '0.5rem' }}>{s.spec}</td>
+              <td style={{ padding: '0.5rem' }}>
+                <Link to={`/player/${s.player_name}`} style={{ textDecoration: 'none' }}>
+                  <ClassIcon className={s.class_name} name={s.player_name} />
+                </Link>
+              </td>
+              <td style={{ padding: '0.5rem', textTransform: 'capitalize' }}>{s.spec?.replace(':', ' ')}</td>
               <td style={{ padding: '0.5rem' }}>{s.overall_score.toFixed(1)}</td>
               <td style={{ padding: '0.5rem' }}><ParseBar percent={s.parse_score} /></td>
             </tr>
@@ -57,7 +62,7 @@ export default function RaidDetail() {
             <tbody>
               {report.consumables.filter(c => c.actual_value > 0).map((c, i) => (
                 <tr key={i} style={{ borderBottom: '1px solid #21262d' }}>
-                  <td style={{ padding: '0.5rem' }}>{c.player_id}</td>
+                  <td style={{ padding: '0.5rem' }}>{c.player_name}</td>
                   <td style={{ padding: '0.5rem' }}>{c.label}{c.optional ? <span style={{ color: '#8b949e' }}> (optional)</span> : ''}</td>
                   <td style={{ padding: '0.5rem' }}>{c.actual_value.toFixed(1)}</td>
                   <td style={{ padding: '0.5rem' }}>{c.target_value}</td>

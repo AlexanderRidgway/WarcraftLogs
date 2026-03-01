@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Depends, Query
 from sqlalchemy import select, func
 from sqlalchemy.ext.asyncio import AsyncSession
-from datetime import datetime, timezone, timedelta
+from datetime import datetime, timedelta
 
 from web.api.database import get_db
 from web.api.models import Player, Score
@@ -11,7 +11,7 @@ router = APIRouter(prefix="/api/leaderboard", tags=["leaderboard"])
 
 @router.get("")
 async def leaderboard(weeks: int = Query(default=4, ge=1, le=52), db: AsyncSession = Depends(get_db)):
-    cutoff = datetime.now(timezone.utc) - timedelta(weeks=weeks)
+    cutoff = datetime.utcnow() - timedelta(weeks=weeks)
 
     result = await db.execute(
         select(

@@ -8,7 +8,7 @@ def _utcnow() -> datetime:
     return datetime.now(timezone.utc).replace(tzinfo=None)
 
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
-from sqlalchemy import select
+from sqlalchemy import select, delete
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.api.warcraftlogs import WarcraftLogsClient
@@ -87,6 +87,10 @@ class SyncWorker:
                     await self._process_and_store_report(report_data)
                 except Exception as e:
                     logger.warning("Failed to process report %s: %s", report_data["code"], e)
+
+            # Recompute attendance after processing new reports
+            if new_reports:
+                await self._compute_attendance()
 
             async with async_session() as session:
                 await self._update_sync_status(session, "reports", "success")
@@ -177,6 +181,62 @@ class SyncWorker:
                     ))
 
             await session.commit()
+
+    async def _compute_attendance(self):
+        """Compute attendance records from all synced reports and attendance requirements."""
+        requirements = self.config.get_attendance()
+        if not requirements:
+            logger.info("No attendance requirements configured, skipping attendance computation")
+            return
+
+        async with async_session() as session:
+            # Load all reports and players
+            reports_result = await session.execute(select(Report).order_by(Report.start_time))
+            reports = reports_result.scalars().all()
+
+            players_result = await session.execute(select(Player))
+            players = players_result.scalars().all()
+            player_map = {p.name: p.id for p in players}
+
+            # Group reports by ISO week
+            weeks: dict[tuple[int, int], list[Report]] = {}
+            for report in reports:
+                iso = report.start_time.isocalendar()
+                key = (iso[0], iso[1])
+                weeks.setdefault(key, []).append(report)
+
+            # Clear existing attendance records and recompute
+            await session.execute(delete(AttendanceRecord))
+
+            for (year, week_num), week_reports in weeks.items():
+                for req in requirements:
+                    zone_id = req["zone_id"]
+                    required = req["required_per_week"]
+
+                    # Count per-player appearances in this zone this week
+                    player_counts: dict[str, int] = {}
+                    for report in week_reports:
+                        if report.zone_id != zone_id:
+                            continue
+                        for name in (report.player_names or []):
+                            player_counts[name] = player_counts.get(name, 0) + 1
+
+                    # Create attendance records for all known players
+                    for player_name, player_id in player_map.items():
+                        count = player_counts.get(player_name, 0)
+                        session.add(AttendanceRecord(
+                            player_id=player_id,
+                            year=year,
+                            week_number=week_num,
+                            zone_id=zone_id,
+                            zone_label=req["label"],
+                            clear_count=count,
+                            required=required,
+                            met=count >= required,
+                        ))
+
+            await session.commit()
+            logger.info("Attendance computation complete: %d weeks, %d players", len(weeks), len(player_map))
 
     async def _update_sync_status(self, session: AsyncSession, sync_type: str, status: str, error: str = None):
         result = await session.execute(select(SyncStatus).where(SyncStatus.sync_type == sync_type))
