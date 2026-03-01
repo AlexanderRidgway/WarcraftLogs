@@ -85,7 +85,9 @@ export default function PlayerProfile() {
           <ClassIcon className={player.class_name} name={player.name} size={32} />
         </div>
         <p className="text-sm text-text-secondary capitalize">
-          {player.class_name} — {player.server} ({player.region.toUpperCase()})
+          {player.scores?.[0]?.spec
+            ? `${player.scores[0].spec.split(':').pop()} ${player.class_name}`
+            : player.class_name} — {player.server} ({player.region.toUpperCase()})
         </p>
         {/* Badges */}
         {badges && badges.length > 0 && (

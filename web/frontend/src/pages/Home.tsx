@@ -15,13 +15,37 @@ const CLASS_ICONS: Record<string, string> = {
 }
 
 type SortKey = 'rank' | 'avg_score' | 'avg_parse' | 'fight_count'
+type RoleFilter = 'all' | 'tank' | 'healer' | 'caster' | 'physical'
 
 const MEDAL = ['', '\u{1F947}', '\u{1F948}', '\u{1F949}']
+
+const TANK_SPECS = ['warrior:protection', 'paladin:protection', 'druid:feral']
+const HEALER_SPECS = ['paladin:holy', 'priest:holy', 'priest:discipline', 'shaman:restoration', 'druid:restoration']
+const CASTER_SPECS = ['mage:arcane', 'mage:fire', 'mage:frost', 'warlock:affliction', 'warlock:destruction', 'warlock:demonology', 'priest:shadow', 'shaman:elemental', 'druid:balance']
+const PHYSICAL_SPECS = ['warrior:fury', 'warrior:arms', 'rogue:combat', 'rogue:assassination', 'hunter:beast mastery', 'hunter:survival', 'hunter:marksmanship', 'shaman:enhancement', 'paladin:retribution']
+
+function getRole(spec: string | undefined): RoleFilter {
+  if (!spec) return 'physical'
+  if (TANK_SPECS.includes(spec)) return 'tank'
+  if (HEALER_SPECS.includes(spec)) return 'healer'
+  if (CASTER_SPECS.includes(spec)) return 'caster'
+  if (PHYSICAL_SPECS.includes(spec)) return 'physical'
+  return 'physical'
+}
+
+const ROLE_FILTERS: { key: RoleFilter; label: string }[] = [
+  { key: 'all', label: 'All' },
+  { key: 'tank', label: 'Tanks' },
+  { key: 'healer', label: 'Healers' },
+  { key: 'caster', label: 'Casters' },
+  { key: 'physical', label: 'Physical DPS' },
+]
 
 export default function Home() {
   const [search, setSearch] = useState('')
   const [weeks, setWeeks] = useState(4)
   const [classFilter, setClassFilter] = useState<string | null>(null)
+  const [roleFilter, setRoleFilter] = useState<RoleFilter>('all')
   const [sortKey, setSortKey] = useState<SortKey>('rank')
   const [sortAsc, setSortAsc] = useState(true)
 
@@ -39,12 +63,13 @@ export default function Home() {
     let result = leaderboard || []
     if (search) result = result.filter(p => p.name.toLowerCase().includes(search.toLowerCase()))
     if (classFilter) result = result.filter(p => p.class_name === classFilter)
+    if (roleFilter !== 'all') result = result.filter(p => getRole(p.spec) === roleFilter)
     const sorted = [...result].sort((a, b) => {
       const av = a[sortKey], bv = b[sortKey]
       return sortAsc ? (av > bv ? 1 : -1) : (av < bv ? 1 : -1)
     })
     return sorted
-  }, [leaderboard, search, classFilter, sortKey, sortAsc])
+  }, [leaderboard, search, classFilter, roleFilter, sortKey, sortAsc])
 
   const toggleSort = (key: SortKey) => {
     if (sortKey === key) setSortAsc(!sortAsc)
@@ -126,6 +151,23 @@ export default function Home() {
             </button>
           ))}
         </div>
+      </div>
+
+      {/* Role filter */}
+      <div className="flex gap-1.5 mb-3 flex-wrap">
+        {ROLE_FILTERS.map(rf => (
+          <button
+            key={rf.key}
+            onClick={() => setRoleFilter(rf.key)}
+            className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all cursor-pointer border ${
+              roleFilter === rf.key
+                ? 'border-accent-gold bg-accent-gold/10 text-accent-gold'
+                : 'border-border-default bg-bg-surface text-text-secondary hover:border-border-hover'
+            }`}
+          >
+            {rf.label}
+          </button>
+        ))}
       </div>
 
       {/* Class filter */}

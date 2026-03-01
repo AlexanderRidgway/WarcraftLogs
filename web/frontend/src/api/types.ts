@@ -56,6 +56,7 @@ export interface LeaderboardEntry {
   rank: number
   name: string
   class_name: string
+  spec?: string
   avg_score: number
   avg_parse: number
   fight_count: number
