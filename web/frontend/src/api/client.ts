@@ -60,6 +60,6 @@ export const api = {
   },
   sync: {
     status: () => fetchJson<SyncStatusEntry[]>('/sync/status'),
-    trigger: () => postJson<{ status: string; message: string }>('/sync/trigger'),
+    trigger: (force = false) => postJson<{ status: string; message: string }>(`/sync/trigger?force=${force}`),
   },
 }

@@ -24,17 +24,25 @@ export default function Layout({ children }: { children: React.ReactNode }) {
   })
 
   const syncMutation = useMutation({
-    mutationFn: api.sync.trigger,
+    mutationFn: () => api.sync.trigger(false),
     onSuccess: () => {
       setTimeout(() => queryClient.invalidateQueries({ queryKey: ['sync-status'] }), 2000)
     },
   })
 
+  const fullResyncMutation = useMutation({
+    mutationFn: () => api.sync.trigger(true),
+    onSuccess: () => {
+      setTimeout(() => queryClient.invalidateQueries({ queryKey: ['sync-status'] }), 2000)
+    },
+  })
+
+  const isSyncing = syncMutation.isPending || fullResyncMutation.isPending
   const reportsSync = syncStatus?.find(s => s.sync_type === 'reports')
   const lastSynced = reportsSync?.last_run_at
 
   return (
-    <div style={{ maxWidth: 1200, margin: '0 auto', padding: '1rem', fontFamily: 'system-ui, sans-serif', color: '#e0e0e0', background: '#0d1117', minHeight: '100vh' }}>
+    <div style={{ maxWidth: 1800, margin: '0 auto', padding: '1rem 2rem', fontFamily: 'system-ui, sans-serif', color: '#e0e0e0', background: '#0d1117', minHeight: '100vh' }}>
       <nav style={{ display: 'flex', gap: '1.5rem', marginBottom: '0.5rem', borderBottom: '1px solid #30363d', paddingBottom: '0.75rem', alignItems: 'center' }}>
         <Link to="/" style={{ color: '#58a6ff', textDecoration: 'none', fontWeight: 'bold' }}>Home</Link>
         <Link to="/raids" style={{ color: '#58a6ff', textDecoration: 'none' }}>Raids</Link>
@@ -46,18 +54,33 @@ export default function Layout({ children }: { children: React.ReactNode }) {
           </span>
           <button
             onClick={() => syncMutation.mutate()}
-            disabled={syncMutation.isPending}
+            disabled={isSyncing}
             style={{
               padding: '4px 12px',
-              background: syncMutation.isPending ? '#21262d' : '#238636',
+              background: isSyncing ? '#21262d' : '#238636',
               color: '#fff',
               border: 'none',
               borderRadius: 6,
-              cursor: syncMutation.isPending ? 'not-allowed' : 'pointer',
+              cursor: isSyncing ? 'not-allowed' : 'pointer',
               fontSize: 13,
             }}
           >
-            {syncMutation.isPending ? 'Syncing...' : 'Sync Now'}
+            {isSyncing ? 'Syncing...' : 'Sync Now'}
+          </button>
+          <button
+            onClick={() => { if (confirm('This will re-fetch and re-process all reports. Continue?')) fullResyncMutation.mutate() }}
+            disabled={isSyncing}
+            style={{
+              padding: '4px 12px',
+              background: isSyncing ? '#21262d' : '#da3633',
+              color: '#fff',
+              border: 'none',
+              borderRadius: 6,
+              cursor: isSyncing ? 'not-allowed' : 'pointer',
+              fontSize: 13,
+            }}
+          >
+            Full Resync
           </button>
         </div>
       </nav>

@@ -45,8 +45,15 @@ async def process_report(
     wcl: WarcraftLogsClient,
     report_code: str,
     config: ConfigLoader,
+    player_classes: dict[str, str] | None = None,
 ) -> dict:
-    """Process a single report: fetch rankings, gear, utility, consumables."""
+    """Process a single report: fetch rankings, gear, utility, consumables.
+
+    Args:
+        player_classes: Optional mapping of player name -> class_name from roster.
+                        When provided, overrides the (sometimes incorrect) class from WCL rankings.
+    """
+    player_classes = player_classes or {}
     rankings_raw = await wcl.get_report_rankings(report_code)
     players_raw = await wcl.get_report_players(report_code)
     timerange = await wcl.get_report_timerange(report_code)
@@ -63,7 +70,7 @@ async def process_report(
     for player in rankings_raw:
         name = player["name"]
         spec = player.get("spec", "")
-        cls = player.get("class", "")
+        cls = player_classes.get(name, player.get("class", ""))
         parse = player.get("rankPercent", 0)
         spec_key = f"{cls.lower()}:{spec.lower()}" if cls and spec else None
         spec_profile = config.get_spec(spec_key) if spec_key else None

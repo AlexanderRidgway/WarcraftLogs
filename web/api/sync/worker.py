@@ -70,12 +70,25 @@ class SyncWorker:
             async with async_session() as session:
                 await self._update_sync_status(session, "roster", "error", str(e))
 
-    async def run_reports_sync(self):
-        logger.info("Starting reports sync")
+    async def run_reports_sync(self, force: bool = False):
+        logger.info("Starting reports sync (force=%s)", force)
         try:
-            async with async_session() as session:
-                result = await session.execute(select(Report.code))
-                existing_codes = {r[0] for r in result.all()}
+            if force:
+                # Clear all report-related data to re-process from scratch
+                async with async_session() as session:
+                    await session.execute(delete(Ranking))
+                    await session.execute(delete(Score))
+                    await session.execute(delete(GearSnapshot))
+                    await session.execute(delete(UtilityData))
+                    await session.execute(delete(ConsumablesData))
+                    await session.execute(delete(Report))
+                    await session.commit()
+                    logger.info("Cleared all report data for full resync")
+                existing_codes = set()
+            else:
+                async with async_session() as session:
+                    result = await session.execute(select(Report.code))
+                    existing_codes = {r[0] for r in result.all()}
 
             new_reports = await fetch_new_reports(
                 self.wcl, self.guild_name, self.server_slug, self.region,
@@ -100,7 +113,14 @@ class SyncWorker:
                 await self._update_sync_status(session, "reports", "error", str(e))
 
     async def _process_and_store_report(self, report_data: dict):
-        processed = await process_report(self.wcl, report_data["code"], self.config)
+        # Build player class map from roster for accurate spec keys
+        player_classes = {}
+        async with async_session() as session:
+            players_result = await session.execute(select(Player))
+            for p in players_result.scalars().all():
+                player_classes[p.name] = p.class_name
+
+        processed = await process_report(self.wcl, report_data["code"], self.config, player_classes)
 
         async with async_session() as session:
             session.add(Report(

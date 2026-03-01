@@ -33,7 +33,7 @@ async def sync_status(db: AsyncSession = Depends(get_db)):
     ]
 
 
-async def _run_sync():
+async def _run_sync(force: bool = False):
     """Run a full sync cycle (roster + reports) in the web API process."""
     if _sync_lock.locked():
         logger.info("Sync already in progress, skipping")
@@ -52,15 +52,15 @@ async def _run_sync():
         config = ConfigLoader()
         worker = SyncWorker(wcl, config)
 
-        logger.info("Manual sync triggered")
+        logger.info("Manual sync triggered (force=%s)", force)
         await worker.run_roster_sync()
-        await worker.run_reports_sync()
+        await worker.run_reports_sync(force=force)
         logger.info("Manual sync complete")
 
 
 @router.post("/trigger")
-async def trigger_sync(background_tasks: BackgroundTasks):
+async def trigger_sync(background_tasks: BackgroundTasks, force: bool = False):
     if _sync_lock.locked():
         return {"status": "already_running", "message": "Sync is already in progress"}
-    background_tasks.add_task(_run_sync)
+    background_tasks.add_task(_run_sync, force=force)
     return {"status": "started", "message": "Sync started"}
