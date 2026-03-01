@@ -25,6 +25,8 @@ class Player(Base):
     utility_data: Mapped[list["UtilityData"]] = relationship(back_populates="player")
     consumables_data: Mapped[list["ConsumablesData"]] = relationship(back_populates="player")
     attendance_records: Mapped[list["AttendanceRecord"]] = relationship(back_populates="player")
+    fights_deaths: Mapped[list["Death"]] = relationship(viewonly=True)
+    badges: Mapped[list["Badge"]] = relationship(viewonly=True)
 
 
 class Report(Base):
@@ -135,6 +137,77 @@ class AttendanceRecord(Base):
 
     __table_args__ = (
         UniqueConstraint("player_id", "year", "week_number", "zone_id", name="uq_attendance_player_week_zone"),
+    )
+
+
+class Fight(Base):
+    __tablename__ = "fights"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    report_code: Mapped[str] = mapped_column(String(20), nullable=False, index=True)
+    fight_id: Mapped[int] = mapped_column(Integer, nullable=False)
+    encounter_name: Mapped[str] = mapped_column(String(100), nullable=False)
+    kill: Mapped[bool] = mapped_column(Boolean, nullable=False)
+    duration_ms: Mapped[int] = mapped_column(Integer, nullable=False)
+    fight_percentage: Mapped[float] = mapped_column(Float, nullable=True)
+    start_time: Mapped[float] = mapped_column(Float, nullable=False)
+    end_time: Mapped[float] = mapped_column(Float, nullable=False)
+
+    deaths: Mapped[list["Death"]] = relationship(back_populates="fight")
+    player_stats: Mapped[list["FightPlayerStats"]] = relationship(back_populates="fight")
+
+    __table_args__ = (
+        UniqueConstraint("report_code", "fight_id", name="uq_fight_report_fight"),
+    )
+
+
+class Death(Base):
+    __tablename__ = "deaths"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    fight_db_id: Mapped[int] = mapped_column(ForeignKey("fights.id"), nullable=False)
+    player_id: Mapped[int] = mapped_column(ForeignKey("players.id"), nullable=False)
+    timestamp_ms: Mapped[int] = mapped_column(Integer, nullable=False)
+    killing_ability: Mapped[str] = mapped_column(String(100), nullable=True)
+    damage_taken: Mapped[int] = mapped_column(Integer, nullable=True)
+
+    fight: Mapped["Fight"] = relationship(back_populates="deaths")
+    player: Mapped["Player"] = relationship()
+
+
+class FightPlayerStats(Base):
+    __tablename__ = "fight_player_stats"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    fight_db_id: Mapped[int] = mapped_column(ForeignKey("fights.id"), nullable=False)
+    player_id: Mapped[int] = mapped_column(ForeignKey("players.id"), nullable=False)
+    dps: Mapped[float] = mapped_column(Float, nullable=True)
+    hps: Mapped[float] = mapped_column(Float, nullable=True)
+    damage_done: Mapped[int] = mapped_column(Integer, nullable=True)
+    healing_done: Mapped[int] = mapped_column(Integer, nullable=True)
+    deaths_count: Mapped[int] = mapped_column(Integer, default=0)
+
+    fight: Mapped["Fight"] = relationship(back_populates="player_stats")
+    player: Mapped["Player"] = relationship()
+
+    __table_args__ = (
+        UniqueConstraint("fight_db_id", "player_id", name="uq_fight_player_stats"),
+    )
+
+
+class Badge(Base):
+    __tablename__ = "badges"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    player_id: Mapped[int] = mapped_column(ForeignKey("players.id"), nullable=False)
+    badge_type: Mapped[str] = mapped_column(String(50), nullable=False)
+    earned_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
+    details: Mapped[str] = mapped_column(String(255), nullable=True)
+
+    player: Mapped["Player"] = relationship()
+
+    __table_args__ = (
+        UniqueConstraint("player_id", "badge_type", "details", name="uq_badge_player_type_details"),
     )
 
 
