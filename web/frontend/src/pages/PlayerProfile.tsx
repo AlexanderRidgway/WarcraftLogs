@@ -22,7 +22,7 @@ export default function PlayerProfile() {
     enabled: !!name,
   })
 
-  const { data: rankings } = useQuery({
+  const { data: rankings, isLoading: rankingsLoading, isError: rankingsError } = useQuery({
     queryKey: ['rankings', name, weeks],
     queryFn: () => api.players.rankings(name!, weeks),
     enabled: !!name && tab === 'performance',
@@ -63,7 +63,7 @@ export default function PlayerProfile() {
       {/* Hero header */}
       <div className="mb-6">
         <div className="flex items-center gap-4 mb-3">
-          <ClassIcon className={player.class_name} name={player.name} size={48} />
+          <ClassIcon className={player.class_name} name={player.name} size={32} />
         </div>
         <p className="text-sm text-text-secondary capitalize">
           {player.class_name} — {player.server} ({player.region.toUpperCase()})
@@ -125,9 +125,11 @@ export default function PlayerProfile() {
               </tr>
             </thead>
             <tbody>
-              {!rankings ? (
+              {rankingsLoading ? (
                 <SkeletonTable rows={6} cols={4} />
-              ) : (
+              ) : rankingsError ? (
+                <tr><td colSpan={4} className="p-6 text-center text-sm text-danger">Failed to load rankings</td></tr>
+              ) : rankings && rankings.length > 0 ? (
                 rankings.map((r, i) => (
                   <tr key={i} className="border-b border-border-default/50 hover:bg-bg-hover transition-colors">
                     <td className="p-3 text-sm text-text-primary">{r.encounter_name}</td>
@@ -136,6 +138,8 @@ export default function PlayerProfile() {
                     <td className="p-3 text-xs text-text-muted font-mono hidden sm:table-cell">{r.report_code}</td>
                   </tr>
                 ))
+              ) : (
+                <tr><td colSpan={4} className="p-6 text-center text-sm text-text-muted">No rankings found for this time period</td></tr>
               )}
             </tbody>
           </table>
