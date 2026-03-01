@@ -53,11 +53,9 @@ resource "aws_instance" "bot" {
 
   user_data = templatefile("${path.module}/user-data.sh", {
     region        = var.aws_region
-    account_id    = var.aws_account_id
     ecr_url       = aws_ecr_repository.bot.repository_url
     secret_name   = aws_secretsmanager_secret.bot.name
     config_bucket = aws_s3_bucket.config.id
-    log_group     = aws_cloudwatch_log_group.bot.name
   })
 
   tags = {
