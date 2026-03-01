@@ -23,6 +23,7 @@ async def main():
     wcl = WarcraftLogsClient(
         client_id=os.getenv("WARCRAFTLOGS_CLIENT_ID", ""),
         client_secret=os.getenv("WARCRAFTLOGS_CLIENT_SECRET", ""),
+        api_url=os.getenv("WCL_API_URL", "https://fresh.warcraftlogs.com/api/v2/client"),
     )
     config = ConfigLoader()
 
