@@ -16,7 +16,7 @@ from src.config.loader import ConfigLoader
 from web.api.database import async_session
 from web.api.models import Player, Report, Ranking, Score, GearSnapshot
 from web.api.models import UtilityData, ConsumablesData, AttendanceRecord, SyncStatus
-from web.api.models import Fight, Death, FightPlayerStats
+from web.api.models import Fight, Death, FightPlayerStats, Badge
 from web.api.sync.roster import sync_roster
 from web.api.sync.reports import fetch_new_reports, process_report
 
@@ -77,6 +77,7 @@ class SyncWorker:
             if force:
                 # Clear all report-related data to re-process from scratch
                 async with async_session() as session:
+                    await session.execute(delete(Badge))
                     await session.execute(delete(Death))
                     await session.execute(delete(FightPlayerStats))
                     await session.execute(delete(Fight))
@@ -107,6 +108,14 @@ class SyncWorker:
 
             # Always recompute attendance from all synced reports
             await self._compute_attendance()
+
+            # Evaluate badges
+            try:
+                async with async_session() as session:
+                    from web.api.badges import evaluate_badges
+                    await evaluate_badges(session)
+            except Exception as e:
+                logger.warning("Badge evaluation failed: %s", e)
 
             async with async_session() as session:
                 await self._update_sync_status(session, "reports", "success")

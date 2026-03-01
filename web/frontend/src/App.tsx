@@ -14,6 +14,7 @@ import Roster from './pages/Roster'
 import Login from './pages/Login'
 import ForgotPassword from './pages/ForgotPassword'
 import ResetPassword from './pages/ResetPassword'
+import Achievements from './pages/Achievements'
 
 const queryClient = new QueryClient()
 
@@ -35,6 +36,7 @@ export default function App() {
               <Route path="/checklist" element={<Checklist />} />
               <Route path="/compare" element={<Compare />} />
               <Route path="/roster" element={<Roster />} />
+              <Route path="/achievements" element={<Achievements />} />
               <Route path="/config" element={<Config />} />
             </Routes>
           </BrowserRouter>

@@ -53,6 +53,12 @@ export default function PlayerProfile() {
     enabled: !!name,
   })
 
+  const { data: badges } = useQuery({
+    queryKey: ['badges', name],
+    queryFn: () => api.players.badges(name!),
+    enabled: !!name,
+  })
+
   if (isLoading) return <Layout><div className="space-y-4"><SkeletonCard /><SkeletonCard /></div></Layout>
   if (!player) return <Layout><p className="text-text-secondary">Player not found</p></Layout>
 
@@ -81,6 +87,16 @@ export default function PlayerProfile() {
         <p className="text-sm text-text-secondary capitalize">
           {player.class_name} — {player.server} ({player.region.toUpperCase()})
         </p>
+        {/* Badges */}
+        {badges && badges.length > 0 && (
+          <div className="flex flex-wrap gap-2 mt-3">
+            {badges.map((b: any, i: number) => (
+              <span key={i} className="px-2 py-1 bg-accent-gold/10 border border-accent-gold/30 rounded-lg text-xs text-accent-gold" title={b.details}>
+                {b.label}
+              </span>
+            ))}
+          </div>
+        )}
       </div>
 
       {/* Score cards */}
