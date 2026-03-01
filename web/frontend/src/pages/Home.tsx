@@ -3,7 +3,7 @@ import { useQuery } from '@tanstack/react-query'
 import { Link } from 'react-router-dom'
 import { api } from '../api/client'
 import Layout from '../components/Layout'
-import ClassIcon from '../components/ClassIcon'
+import ClassIcon, { getSpecLabel } from '../components/ClassIcon'
 import ParseBar from '../components/ParseBar'
 import { SkeletonTable } from '../components/Skeleton'
 
@@ -209,7 +209,7 @@ export default function Home() {
             <tr className="border-b border-border-default">
               <SortHeader label="Rank" field="rank" />
               <th className="p-3 text-left text-xs font-semibold text-text-muted uppercase tracking-wider">Player</th>
-              <th className="p-3 text-left text-xs font-semibold text-text-muted uppercase tracking-wider hidden sm:table-cell">Class</th>
+              <th className="p-3 text-left text-xs font-semibold text-text-muted uppercase tracking-wider hidden sm:table-cell">Spec</th>
               <SortHeader label="Score" field="avg_score" />
               <SortHeader label="Avg Parse" field="avg_parse" />
               <SortHeader label="Fights" field="fight_count" />
@@ -229,10 +229,10 @@ export default function Home() {
                   </td>
                   <td className="p-3">
                     <Link to={`/player/${entry.name}`} className="no-underline">
-                      <ClassIcon className={entry.class_name} name={entry.name} />
+                      <ClassIcon className={entry.class_name} name={entry.name} spec={entry.spec} />
                     </Link>
                   </td>
-                  <td className="p-3 text-sm text-text-secondary capitalize hidden sm:table-cell">{entry.class_name}</td>
+                  <td className="p-3 text-sm text-text-secondary capitalize hidden sm:table-cell">{entry.spec ? `${getSpecLabel(entry.spec)} ${entry.class_name}` : entry.class_name}</td>
                   <td className="p-3 text-sm font-semibold text-accent-gold tabular-nums">{entry.avg_score}</td>
                   <td className="p-3"><ParseBar percent={entry.avg_parse} /></td>
                   <td className="p-3 text-sm text-text-secondary tabular-nums">{entry.fight_count}</td>
