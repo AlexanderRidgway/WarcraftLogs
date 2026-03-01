@@ -45,6 +45,7 @@ export const api = {
   mvp: (weeksAgo = 0) => fetchJson<import('./types').MvpEntry | null>(`/mvp?weeks_ago=${weeksAgo}`),
   checklist: () => fetchJson<{ players: any[] }>('/checklist'),
   compare: (spec: string, weeks = 4) => fetchJson<any[]>(`/compare?spec=${encodeURIComponent(spec)}&weeks=${weeks}`),
+  roster: (weeks = 4) => fetchJson<any>(`/roster/health?weeks=${weeks}`),
   reports: {
     list: () => fetchJson<import('./types').ReportSummary[]>('/reports'),
     get: (code: string) => fetchJson<import('./types').ReportDetail>(`/reports/${code}`),

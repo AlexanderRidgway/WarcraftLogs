@@ -10,6 +10,7 @@ import Attendance from './pages/Attendance'
 import Config from './pages/Config'
 import Checklist from './pages/Checklist'
 import Compare from './pages/Compare'
+import Roster from './pages/Roster'
 import Login from './pages/Login'
 import ForgotPassword from './pages/ForgotPassword'
 import ResetPassword from './pages/ResetPassword'
@@ -33,6 +34,7 @@ export default function App() {
               <Route path="/attendance" element={<Attendance />} />
               <Route path="/checklist" element={<Checklist />} />
               <Route path="/compare" element={<Compare />} />
+              <Route path="/roster" element={<Roster />} />
               <Route path="/config" element={<Config />} />
             </Routes>
           </BrowserRouter>
