@@ -462,9 +462,13 @@ class WarcraftLogsClient:
         dmg_data = await self._query_table(report_code, None, start, end, "DamageDone")
         heal_data = await self._query_table(report_code, None, start, end, "Healing")
 
+        # WCL table entries use class name as "type" (e.g. "Shaman", "Warrior"),
+        # not "Player". Exclude known non-player types instead.
+        NON_PLAYER_TYPES = {"Pet", "NPC", "Boss", "Unknown"}
+
         stats = {}
         for entry in dmg_data.get("entries", []):
-            if entry.get("type") != "Player":
+            if entry.get("type") in NON_PLAYER_TYPES:
                 continue
             name = entry["name"]
             total = entry.get("total", 0)
@@ -476,7 +480,7 @@ class WarcraftLogsClient:
             }
 
         for entry in heal_data.get("entries", []):
-            if entry.get("type") != "Player":
+            if entry.get("type") in NON_PLAYER_TYPES:
                 continue
             name = entry["name"]
             total = entry.get("total", 0)

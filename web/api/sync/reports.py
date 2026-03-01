@@ -234,8 +234,11 @@ async def process_report(
         # Fetch deaths for this fight
         try:
             death_entries = await wcl.get_report_deaths(report_code, f["startTime"], f["endTime"])
+            # WCL Deaths table uses class name as "type" (e.g. "Warrior"),
+            # not "Player". Exclude known non-player types instead.
+            non_player = {"Pet", "NPC", "Boss", "Unknown"}
             for d in death_entries:
-                if d.get("type") != "Player":
+                if d.get("type") in non_player:
                     continue
                 killing_ability = None
                 damage_taken = None
