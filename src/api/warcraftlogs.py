@@ -419,6 +419,73 @@ class WarcraftLogsClient:
         actors = report.get("masterData", {}).get("actors", [])
         return [{"id": a["id"], "name": a["name"]} for a in actors if a["type"] == "Player"]
 
+    async def get_report_fights(self, report_code: str) -> list:
+        """Fetch all boss fights for a report (excludes trash)."""
+        gql = """
+        query($code: String!) {
+          reportData {
+            report(code: $code) {
+              fights(killType: Encounters) {
+                id
+                name
+                kill
+                startTime
+                endTime
+                fightPercentage
+                encounterID
+              }
+            }
+          }
+        }
+        """
+        result = await self.query(gql, {"code": report_code})
+        report = result.get("data", {}).get("reportData", {}).get("report")
+        if not report:
+            return []
+        return report.get("fights", [])
+
+    async def get_report_deaths(self, report_code: str, start: float, end: float) -> list:
+        """Fetch death events for a time window. Returns list of death entries."""
+        data = await self._query_table(report_code, None, start, end, "Deaths")
+        return data.get("entries", [])
+
+    async def get_fight_stats(self, report_code: str, start: float, end: float) -> dict:
+        """Fetch per-player damage and healing for a fight time window.
+
+        Returns: {player_name: {damage_done, healing_done, dps, hps}}
+        """
+        duration_s = (end - start) / 1000.0
+        if duration_s <= 0:
+            return {}
+
+        dmg_data = await self._query_table(report_code, None, start, end, "DamageDone")
+        heal_data = await self._query_table(report_code, None, start, end, "Healing")
+
+        stats = {}
+        for entry in dmg_data.get("entries", []):
+            if entry.get("type") != "Player":
+                continue
+            name = entry["name"]
+            total = entry.get("total", 0)
+            stats[name] = {
+                "damage_done": total,
+                "dps": round(total / duration_s, 1) if duration_s > 0 else 0,
+                "healing_done": 0,
+                "hps": 0,
+            }
+
+        for entry in heal_data.get("entries", []):
+            if entry.get("type") != "Player":
+                continue
+            name = entry["name"]
+            total = entry.get("total", 0)
+            if name not in stats:
+                stats[name] = {"damage_done": 0, "dps": 0, "healing_done": 0, "hps": 0}
+            stats[name]["healing_done"] = total
+            stats[name]["hps"] = round(total / duration_s, 1) if duration_s > 0 else 0
+
+        return stats
+
     async def get_report_timerange(self, report_code: str) -> dict:
         """Return {start, end} timestamps (relative to report start) for the full report."""
         gql = """

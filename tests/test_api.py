@@ -465,3 +465,101 @@ async def test_get_report_gear_empty():
     result = await client.get_report_gear("abc123")
 
     assert result == []
+
+
+@pytest.mark.asyncio
+async def test_get_report_fights():
+    client = WarcraftLogsClient(client_id="id", client_secret="secret")
+    client._token = "mock_token"
+    client._token_expiry = float("inf")
+
+    mock_response = {
+        "data": {
+            "reportData": {
+                "report": {
+                    "fights": [
+                        {"id": 1, "name": "Gruul", "kill": True, "startTime": 0,
+                         "endTime": 180000, "fightPercentage": 0, "encounterID": 649},
+                        {"id": 2, "name": "Maulgar", "kill": False, "startTime": 200000,
+                         "endTime": 350000, "fightPercentage": 45.2, "encounterID": 650},
+                    ]
+                }
+            }
+        }
+    }
+
+    with patch.object(client, "query", new_callable=AsyncMock, return_value=mock_response):
+        fights = await client.get_report_fights("TEST")
+    assert len(fights) == 2
+    assert fights[0]["name"] == "Gruul"
+    assert fights[0]["kill"] is True
+    assert fights[1]["kill"] is False
+
+
+@pytest.mark.asyncio
+async def test_get_report_deaths():
+    client = WarcraftLogsClient(client_id="id", client_secret="secret")
+    client._token = "mock_token"
+    client._token_expiry = float("inf")
+
+    mock_table_data = {
+        "entries": [
+            {"name": "Thrall", "id": 3, "type": "Player",
+             "deathTime": 145000,
+             "damage": {"total": 25000, "entries": [
+                 {"ability": {"name": "Shatter"}, "amount": 25000}
+             ]}}
+        ]
+    }
+
+    async def mock_query_table(report_code, source_id, start, end, data_type):
+        assert data_type == "Deaths"
+        return mock_table_data
+
+    client._query_table = mock_query_table
+    deaths = await client.get_report_deaths("TEST", 0, 180000)
+    assert len(deaths) == 1
+    assert deaths[0]["name"] == "Thrall"
+
+
+@pytest.mark.asyncio
+async def test_get_fight_stats():
+    client = WarcraftLogsClient(client_id="id", client_secret="secret")
+    client._token = "mock_token"
+    client._token_expiry = float("inf")
+
+    call_types = []
+    async def mock_query_table(report_code, source_id, start, end, data_type):
+        call_types.append(data_type)
+        if data_type == "DamageDone":
+            return {"entries": [
+                {"name": "Warrior", "type": "Player", "total": 360000},
+                {"name": "Boss", "type": "NPC", "total": 0},
+            ]}
+        elif data_type == "Healing":
+            return {"entries": [
+                {"name": "Healer", "type": "Player", "total": 500000},
+                {"name": "Warrior", "type": "Player", "total": 10000},
+            ]}
+        return {"entries": []}
+
+    client._query_table = mock_query_table
+    stats = await client.get_fight_stats("TEST", 0, 180000)
+
+    assert "DamageDone" in call_types
+    assert "Healing" in call_types
+    assert stats["Warrior"]["damage_done"] == 360000
+    assert stats["Warrior"]["dps"] == 2000.0
+    assert stats["Warrior"]["healing_done"] == 10000
+    assert stats["Healer"]["healing_done"] == 500000
+    assert stats["Healer"]["damage_done"] == 0
+
+
+@pytest.mark.asyncio
+async def test_get_fight_stats_zero_duration():
+    client = WarcraftLogsClient(client_id="id", client_secret="secret")
+    client._token = "mock_token"
+    client._token_expiry = float("inf")
+
+    stats = await client.get_fight_stats("TEST", 100, 100)
+    assert stats == {}
