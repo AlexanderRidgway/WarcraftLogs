@@ -14,7 +14,7 @@ data "aws_ami" "amazon_linux" {
 }
 
 resource "aws_security_group" "bot" {
-  name        = "${var.project_name}-sg"
+  name_prefix = "${var.project_name}-sg"
   description = "Security group for WarcraftLogs bot and guild website"
 
   ingress {
@@ -42,6 +42,10 @@ resource "aws_security_group" "bot" {
 
   tags = {
     Name = "${var.project_name}-sg"
+  }
+
+  lifecycle {
+    create_before_destroy = true
   }
 }
 
