@@ -5,7 +5,7 @@ from datetime import datetime, timezone
 
 def _utcnow() -> datetime:
     """Return current UTC time as a timezone-naive datetime (for TIMESTAMP WITHOUT TIME ZONE columns)."""
-    return _utcnow().replace(tzinfo=None)
+    return datetime.now(timezone.utc).replace(tzinfo=None)
 
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from sqlalchemy import select
