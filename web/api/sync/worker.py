@@ -88,9 +88,8 @@ class SyncWorker:
                 except Exception as e:
                     logger.warning("Failed to process report %s: %s", report_data["code"], e)
 
-            # Recompute attendance after processing new reports
-            if new_reports:
-                await self._compute_attendance()
+            # Always recompute attendance from all synced reports
+            await self._compute_attendance()
 
             async with async_session() as session:
                 await self._update_sync_status(session, "reports", "success")
