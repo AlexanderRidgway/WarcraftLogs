@@ -19,7 +19,10 @@ export default function Home() {
 
   return (
     <Layout>
-      <h1 style={{ marginBottom: '1rem' }}>CRANK Guild Dashboard</h1>
+      <h1 style={{ marginBottom: '1rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+        <img src="/favicon.jpg" alt="CRANK" width={32} height={32} style={{ borderRadius: 4 }} />
+        CRANK Guild Dashboard
+      </h1>
       <div style={{ display: 'flex', gap: '1rem', marginBottom: '1rem' }}>
         <input
           type="text"

@@ -44,7 +44,10 @@ export default function Layout({ children }: { children: React.ReactNode }) {
   return (
     <div style={{ margin: '0 auto', padding: '1rem 2rem', fontFamily: 'system-ui, sans-serif', color: '#e0e0e0', background: '#0d1117', minHeight: '100vh' }}>
       <nav style={{ display: 'flex', gap: '1.5rem', marginBottom: '0.5rem', borderBottom: '1px solid #30363d', paddingBottom: '0.75rem', alignItems: 'center' }}>
-        <Link to="/" style={{ color: '#58a6ff', textDecoration: 'none', fontWeight: 'bold' }}>Home</Link>
+        <Link to="/" style={{ color: '#58a6ff', textDecoration: 'none', fontWeight: 'bold', display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+          <img src="/favicon.jpg" alt="CRANK" width={24} height={24} style={{ borderRadius: 3 }} />
+          CRANK
+        </Link>
         <Link to="/raids" style={{ color: '#58a6ff', textDecoration: 'none' }}>Raids</Link>
         <Link to="/attendance" style={{ color: '#58a6ff', textDecoration: 'none' }}>Attendance</Link>
         <Link to="/config" style={{ color: '#58a6ff', textDecoration: 'none' }}>Config</Link>

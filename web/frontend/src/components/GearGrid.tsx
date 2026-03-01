@@ -1,3 +1,4 @@
+import { useEffect } from 'react'
 import type { GearItem } from '../api/types'
 
 const SLOT_NAMES: Record<number, string> = {
@@ -11,8 +12,21 @@ const QUALITY_COLORS: Record<number, string> = {
   0: '#9d9d9d', 1: '#fff', 2: '#1eff00', 3: '#0070dd', 4: '#a335ee', 5: '#ff8000',
 }
 
+declare global {
+  interface Window {
+    $WowheadPower?: { refreshLinks: () => void }
+  }
+}
+
 export default function GearGrid({ gear, issues }: { gear: GearItem[]; issues: { slot: string; problem: string }[] }) {
   const issueMap = new Map(issues.map(i => [i.slot, i.problem]))
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      window.$WowheadPower?.refreshLinks()
+    }, 100)
+    return () => clearTimeout(timer)
+  }, [gear])
 
   return (
     <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '0.25rem' }}>
@@ -30,11 +44,32 @@ export default function GearGrid({ gear, issues }: { gear: GearItem[]; issues: {
             }}
           >
             <div style={{ fontSize: 11, color: '#8b949e' }}>{slotName}</div>
-            <div style={{ color: QUALITY_COLORS[item.quality], fontSize: 14 }}>
-              ilvl {item.item_level}
-              {item.permanent_enchant ? ' ✨' : ''}
+            <div style={{ fontSize: 14 }}>
+              <a
+                href={`https://tbc.wowhead.com/item=${item.item_id}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                style={{ color: QUALITY_COLORS[item.quality], textDecoration: 'none' }}
+              >
+                Item #{item.item_id}
+              </a>
+              <span style={{ color: '#8b949e', fontSize: 12, marginLeft: 6 }}>
+                ilvl {item.item_level}
+              </span>
             </div>
-            {issue && <div style={{ fontSize: 11, color: '#ff6b6b' }}>{issue}</div>}
+            {item.permanent_enchant && (
+              <div style={{ fontSize: 11, color: '#1eff00', marginTop: 2 }}>
+                <a
+                  href={`https://tbc.wowhead.com/spell=${item.permanent_enchant}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  style={{ color: '#1eff00', textDecoration: 'none', fontSize: 11 }}
+                >
+                  Enchant #{item.permanent_enchant}
+                </a>
+              </div>
+            )}
+            {issue && <div style={{ fontSize: 11, color: '#ff6b6b', marginTop: 2 }}>{issue}</div>}
           </div>
         )
       })}
