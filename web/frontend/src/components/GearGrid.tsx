@@ -8,8 +8,9 @@ const SLOT_NAMES: Record<number, string> = {
   15: 'Main Hand', 16: 'Off Hand', 17: 'Ranged',
 }
 
-const QUALITY_COLORS: Record<number, string> = {
-  0: '#9d9d9d', 1: '#fff', 2: '#1eff00', 3: '#0070dd', 4: '#a335ee', 5: '#ff8000',
+const QUALITY_BORDERS: Record<number, string> = {
+  0: 'border-l-quality-poor', 1: 'border-l-quality-common', 2: 'border-l-quality-uncommon',
+  3: 'border-l-quality-rare', 4: 'border-l-quality-epic', 5: 'border-l-quality-legendary',
 }
 
 declare global {
@@ -37,24 +38,22 @@ export default function GearGrid({ gear, issues }: { gear: GearItem[]; issues: {
   }, [gear])
 
   return (
-    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '0.25rem' }}>
+    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
       {gear.map(item => {
         const slotName = SLOT_NAMES[item.slot] || `Slot ${item.slot}`
         const issue = issueMap.get(slotName)
         const activeGems = item.gems?.filter(g => g.id > 0) || []
         const dataWh = buildDataWowhead(item)
+        const borderClass = QUALITY_BORDERS[item.quality] || 'border-l-text-muted'
         return (
           <div
             key={item.slot}
-            style={{
-              padding: '0.5rem',
-              background: issue ? '#2a1515' : '#161b22',
-              borderRadius: 4,
-              borderLeft: `3px solid ${QUALITY_COLORS[item.quality] || '#999'}`,
-            }}
+            className={`p-3 rounded-lg border-l-3 transition-all duration-200 hover:scale-[1.02] hover:shadow-lg hover:shadow-black/20 ${borderClass} ${
+              issue ? 'bg-danger/10 border border-danger/20' : 'bg-bg-surface border border-border-default hover:border-border-hover'
+            }`}
           >
-            <div style={{ fontSize: 11, color: '#8b949e' }}>{slotName}</div>
-            <div style={{ fontSize: 14 }}>
+            <div className="text-xs text-text-muted">{slotName}</div>
+            <div className="text-sm mt-0.5">
               <a
                 href={`https://tbc.wowhead.com/item=${item.item_id}`}
                 target="_blank"
@@ -63,31 +62,27 @@ export default function GearGrid({ gear, issues }: { gear: GearItem[]; issues: {
               >
                 {slotName}
               </a>
-              <span style={{ color: '#8b949e', fontSize: 12, marginLeft: 6 }}>
-                ilvl {item.item_level}
-              </span>
+              <span className="text-text-muted text-xs ml-1.5">ilvl {item.item_level}</span>
             </div>
             {item.permanent_enchant && (
-              <div style={{ fontSize: 11, color: '#1eff00', marginTop: 2 }}>
-                Enchanted
-              </div>
+              <div className="text-xs text-parse-uncommon mt-1">Enchanted</div>
             )}
             {activeGems.length > 0 && (
-              <div style={{ fontSize: 11, marginTop: 2, display: 'flex', flexWrap: 'wrap', gap: '0 6px' }}>
+              <div className="text-xs mt-1 flex flex-wrap gap-1">
                 {activeGems.map((gem, idx) => (
                   <a
                     key={idx}
                     href={`https://tbc.wowhead.com/item=${gem.id}`}
                     target="_blank"
                     rel="noopener noreferrer"
-                    style={{ fontSize: 11 }}
+                    className="text-xs"
                   >
                     [Gem]
                   </a>
                 ))}
               </div>
             )}
-            {issue && <div style={{ fontSize: 11, color: '#ff6b6b', marginTop: 2 }}>{issue}</div>}
+            {issue && <div className="text-xs text-danger mt-1">{issue}</div>}
           </div>
         )
       })}

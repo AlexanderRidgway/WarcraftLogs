@@ -7,6 +7,7 @@ import ClassIcon from '../components/ClassIcon'
 import ScoreCard from '../components/ScoreCard'
 import ParseBar from '../components/ParseBar'
 import GearGrid from '../components/GearGrid'
+import { SkeletonTable, SkeletonCard } from '../components/Skeleton'
 
 type Tab = 'performance' | 'gear' | 'attendance'
 
@@ -39,96 +40,143 @@ export default function PlayerProfile() {
     enabled: !!name && tab === 'attendance',
   })
 
-  if (isLoading) return <Layout><p>Loading...</p></Layout>
-  if (!player) return <Layout><p>Player not found</p></Layout>
+  if (isLoading) return <Layout><div className="space-y-4"><SkeletonCard /><SkeletonCard /></div></Layout>
+  if (!player) return <Layout><p className="text-text-secondary">Player not found</p></Layout>
 
   const avgScore = player.scores.length
     ? player.scores.reduce((sum, s) => sum + s.overall_score, 0) / player.scores.length
     : null
-
   const avgParse = player.scores.length
     ? player.scores.reduce((sum, s) => sum + s.parse_score, 0) / player.scores.length
     : null
 
+  const TABS: { key: Tab; label: string }[] = [
+    { key: 'performance', label: 'Performance' },
+    { key: 'gear', label: 'Gear' },
+    { key: 'attendance', label: 'Attendance' },
+  ]
+
+  const WEEK_OPTIONS = [2, 4, 8]
+
   return (
     <Layout>
-      <h1><ClassIcon className={player.class_name} name={player.name} size={36} /></h1>
-      <p style={{ color: '#8b949e', textTransform: 'capitalize' }}>{player.class_name} — {player.server} ({player.region.toUpperCase()})</p>
+      {/* Hero header */}
+      <div className="mb-6">
+        <div className="flex items-center gap-4 mb-3">
+          <ClassIcon className={player.class_name} name={player.name} size={48} />
+        </div>
+        <p className="text-sm text-text-secondary capitalize">
+          {player.class_name} — {player.server} ({player.region.toUpperCase()})
+        </p>
+      </div>
 
-      <div style={{ display: 'flex', gap: '1rem', marginBottom: '1.5rem' }}>
+      {/* Score cards */}
+      <div className="flex gap-4 mb-6">
         <ScoreCard label="Consistency" value={avgScore} />
         <ScoreCard label="Avg Parse" value={avgParse} />
       </div>
 
-      <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '1rem' }}>
-        {(['performance', 'gear', 'attendance'] as Tab[]).map(t => (
-          <button
-            key={t}
-            onClick={() => setTab(t)}
-            style={{
-              padding: '0.5rem 1rem',
-              background: tab === t ? '#1f6feb' : '#21262d',
-              border: '1px solid #30363d',
-              borderRadius: 4,
-              color: '#e0e0e0',
-              cursor: 'pointer',
-              textTransform: 'capitalize',
-            }}
-          >
-            {t}
-          </button>
-        ))}
-        {tab === 'performance' && (
-          <select value={weeks} onChange={e => setWeeks(Number(e.target.value))} style={{ marginLeft: 'auto', padding: '0.5rem', background: '#161b22', border: '1px solid #30363d', borderRadius: 4, color: '#e0e0e0' }}>
-            <option value={2}>2 weeks</option>
-            <option value={4}>4 weeks</option>
-            <option value={8}>8 weeks</option>
-          </select>
+      {/* Tabs + week selector */}
+      <div className="flex items-center justify-between mb-5 border-b border-border-default">
+        <div className="flex">
+          {TABS.map(t => (
+            <button
+              key={t.key}
+              onClick={() => setTab(t.key)}
+              className={`px-4 py-3 text-sm font-medium transition-colors cursor-pointer bg-transparent border-none border-b-2 -mb-px ${
+                tab === t.key
+                  ? 'text-accent-gold border-accent-gold'
+                  : 'text-text-secondary hover:text-text-primary border-transparent'
+              }`}
+            >
+              {t.label}
+            </button>
+          ))}
+        </div>
+        {(tab === 'performance' || tab === 'attendance') && (
+          <div className="flex rounded-lg border border-border-default overflow-hidden mb-1">
+            {WEEK_OPTIONS.map(w => (
+              <button
+                key={w}
+                onClick={() => setWeeks(w)}
+                className={`px-3 py-1.5 text-xs font-medium transition-colors cursor-pointer border-none ${
+                  weeks === w
+                    ? 'bg-accent-gold text-bg-base'
+                    : 'bg-bg-surface text-text-secondary hover:text-text-primary'
+                }`}
+              >
+                {w}w
+              </button>
+            ))}
+          </div>
         )}
       </div>
 
-      {tab === 'performance' && rankings && (
-        <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-          <thead>
-            <tr style={{ borderBottom: '1px solid #30363d', textAlign: 'left' }}>
-              <th style={{ padding: '0.5rem' }}>Boss</th>
-              <th style={{ padding: '0.5rem' }}>Spec</th>
-              <th style={{ padding: '0.5rem' }}>Parse</th>
-              <th style={{ padding: '0.5rem' }}>Report</th>
-            </tr>
-          </thead>
-          <tbody>
-            {rankings.map((r, i) => (
-              <tr key={i} style={{ borderBottom: '1px solid #21262d' }}>
-                <td style={{ padding: '0.5rem' }}>{r.encounter_name}</td>
-                <td style={{ padding: '0.5rem' }}>{r.spec}</td>
-                <td style={{ padding: '0.5rem' }}><ParseBar percent={r.rank_percent} /></td>
-                <td style={{ padding: '0.5rem', color: '#8b949e', fontSize: 12 }}>{r.report_code}</td>
+      {/* Performance tab */}
+      {tab === 'performance' && (
+        <div className="bg-bg-surface border border-border-default rounded-xl overflow-hidden">
+          <table className="w-full">
+            <thead>
+              <tr className="border-b border-border-default">
+                <th className="p-3 text-left text-xs font-semibold text-text-muted uppercase tracking-wider">Boss</th>
+                <th className="p-3 text-left text-xs font-semibold text-text-muted uppercase tracking-wider">Spec</th>
+                <th className="p-3 text-left text-xs font-semibold text-text-muted uppercase tracking-wider">Parse</th>
+                <th className="p-3 text-left text-xs font-semibold text-text-muted uppercase tracking-wider hidden sm:table-cell">Report</th>
               </tr>
-            ))}
-          </tbody>
-        </table>
+            </thead>
+            <tbody>
+              {!rankings ? (
+                <SkeletonTable rows={6} cols={4} />
+              ) : (
+                rankings.map((r, i) => (
+                  <tr key={i} className="border-b border-border-default/50 hover:bg-bg-hover transition-colors">
+                    <td className="p-3 text-sm text-text-primary">{r.encounter_name}</td>
+                    <td className="p-3 text-sm text-text-secondary">{r.spec}</td>
+                    <td className="p-3"><ParseBar percent={r.rank_percent} /></td>
+                    <td className="p-3 text-xs text-text-muted font-mono hidden sm:table-cell">{r.report_code}</td>
+                  </tr>
+                ))
+              )}
+            </tbody>
+          </table>
+        </div>
       )}
 
+      {/* Gear tab */}
       {tab === 'gear' && gear && (
         <div>
-          <p style={{ marginBottom: '0.5rem' }}>
-            Avg iLvl: <strong>{gear.avg_ilvl.toFixed(1)}</strong> {gear.ilvl_ok ? '✅' : '⚠️'}
-            {gear.issues.length > 0 && <span style={{ color: '#ff6b6b', marginLeft: '1rem' }}>{gear.issues.length} issue(s)</span>}
-          </p>
+          <div className="flex items-center gap-4 mb-4">
+            <span className="text-sm text-text-secondary">
+              Avg iLvl: <strong className="text-text-primary">{gear.avg_ilvl.toFixed(1)}</strong>
+              {gear.ilvl_ok ? ' \u2705' : ' \u26A0\uFE0F'}
+            </span>
+            {gear.issues.length > 0 && (
+              <span className="text-sm text-danger">{gear.issues.length} issue(s)</span>
+            )}
+          </div>
           <GearGrid gear={gear.gear} issues={gear.issues} />
         </div>
       )}
 
+      {/* Attendance tab */}
       {tab === 'attendance' && attendance && (
-        <div>
+        <div className="space-y-3">
           {attendance.map((week, i) => (
-            <div key={i} style={{ marginBottom: '0.75rem', padding: '0.5rem', background: '#161b22', borderRadius: 8, border: '1px solid #30363d' }}>
-              <strong>Week {week.week}, {week.year}</strong>
-              <div style={{ marginTop: '0.25rem' }}>
+            <div key={i} className="bg-bg-surface border border-border-default rounded-xl p-4">
+              <div className="font-semibold text-sm text-text-primary mb-2">
+                Week {week.week}, {week.year}
+              </div>
+              <div className="flex flex-wrap gap-3">
                 {week.zones?.map((z, j) => (
-                  <span key={j} style={{ marginRight: '1rem', fontSize: 14 }}>
-                    {z.met ? '✅' : '❌'} {z.zone_label} ({z.clear_count}/{z.required})
+                  <span
+                    key={j}
+                    className={`text-sm px-3 py-1 rounded-lg border ${
+                      z.met
+                        ? 'border-success/30 bg-success/10 text-success'
+                        : 'border-danger/30 bg-danger/10 text-danger'
+                    }`}
+                  >
+                    {z.met ? '\u2705' : '\u274C'} {z.zone_label} ({z.clear_count}/{z.required})
                   </span>
                 ))}
               </div>
