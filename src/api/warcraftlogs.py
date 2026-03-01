@@ -326,18 +326,27 @@ class WarcraftLogsClient:
 
         spec_map: dict[str, str] = {}
         for p in all_players:
+            if not isinstance(p, dict):
+                continue
             name = p.get("name", "")
             if not name:
                 continue
             # 'type' field is the class name (e.g., "Warlock")
             cls = p.get("type", "")
-            # 'specs' is a list of spec objects, usually just one entry with 'spec' field
+            # 'specs' can be a list of spec objects or strings
             specs = p.get("specs", [])
-            spec_name = specs[0].get("spec", "") if specs else ""
+            spec_name = ""
+            if specs and isinstance(specs, list):
+                first = specs[0]
+                if isinstance(first, dict):
+                    spec_name = first.get("spec", "")
+                elif isinstance(first, str):
+                    spec_name = first
             if cls and spec_name:
                 spec_map[name] = f"{cls}:{spec_name}"
             elif cls:
                 spec_map[name] = cls
+            logger.debug("Player spec: %s -> class=%s spec=%s raw_specs=%s", name, cls, spec_name, specs)
         return spec_map
 
     async def get_report_rankings(self, report_code: str) -> list:
