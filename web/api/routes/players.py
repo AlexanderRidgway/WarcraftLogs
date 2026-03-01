@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
-from datetime import datetime, timezone, timedelta
+from datetime import datetime, timedelta
 
 from web.api.database import get_db
 from web.api.models import Player, Ranking, Score, GearSnapshot, UtilityData, ConsumablesData, AttendanceRecord
@@ -66,7 +66,7 @@ async def get_player_rankings(name: str, weeks: int = Query(default=4, ge=1, le=
     if not player:
         raise HTTPException(status_code=404, detail="Player not found")
 
-    cutoff = datetime.now(timezone.utc) - timedelta(weeks=weeks)
+    cutoff = datetime.utcnow() - timedelta(weeks=weeks)
     rankings_result = await db.execute(
         select(Ranking)
         .where(Ranking.player_id == player.id, Ranking.recorded_at >= cutoff)
