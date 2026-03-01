@@ -49,6 +49,8 @@ export const api = {
   reports: {
     list: () => fetchJson<import('./types').ReportSummary[]>('/reports'),
     get: (code: string) => fetchJson<import('./types').ReportDetail>(`/reports/${code}`),
+    deaths: (code: string) => fetchJson<any>(`/reports/${code}/deaths`),
+    wipes: (code: string) => fetchJson<any[]>(`/reports/${code}/wipes`),
   },
   attendance: (weeks = 4) => fetchJson<import('./types').PlayerAttendance[]>(`/attendance?weeks=${weeks}`),
   config: {

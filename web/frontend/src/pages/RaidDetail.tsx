@@ -14,6 +14,18 @@ export default function RaidDetail() {
     enabled: !!code,
   })
 
+  const { data: deathData } = useQuery({
+    queryKey: ['deaths', code],
+    queryFn: () => api.reports.deaths(code!),
+    enabled: !!code,
+  })
+
+  const { data: wipeData } = useQuery({
+    queryKey: ['wipes', code],
+    queryFn: () => api.reports.wipes(code!),
+    enabled: !!code,
+  })
+
   if (isLoading) return <Layout><div className="bg-bg-surface border border-border-default rounded-xl overflow-hidden"><table className="w-full"><tbody><SkeletonTable rows={8} cols={5} /></tbody></table></div></Layout>
   if (!report) return <Layout><p className="text-text-secondary">Report not found</p></Layout>
 
@@ -88,6 +100,96 @@ export default function RaidDetail() {
             </tbody>
           </table>
         </details>
+      )}
+
+      {/* Death Summary */}
+      {deathData && (
+        <div className="mt-6">
+          <details className="bg-bg-surface border border-border-default rounded-xl overflow-hidden" open>
+            <summary className="p-4 cursor-pointer text-sm font-semibold text-text-primary hover:bg-bg-hover transition-colors select-none">
+              Deaths
+            </summary>
+            <div className="p-4 pt-0">
+              {/* Death totals */}
+              {deathData.totals?.length > 0 && (
+                <div className="mb-4">
+                  <div className="text-xs text-text-muted mb-2 uppercase font-semibold">Total Deaths</div>
+                  <div className="flex flex-wrap gap-2">
+                    {deathData.totals.map((t: any) => (
+                      <span key={t.player} className={`px-2 py-1 rounded text-xs border ${
+                        t.death_count === 0 ? 'bg-success/10 border-success/20 text-success' : 'bg-bg-hover border-border-default text-text-primary'
+                      }`}>
+                        {t.player}: {t.death_count}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Per-fight deaths */}
+              {deathData.per_fight?.map((fight: any, i: number) => (
+                fight.deaths.length > 0 && (
+                  <div key={i} className="mb-3">
+                    <div className="text-sm font-medium text-text-primary mb-1">
+                      {fight.fight_name} {fight.kill ? '(Kill)' : '(Wipe)'}
+                    </div>
+                    <div className="space-y-0.5">
+                      {fight.deaths.map((d: any, j: number) => (
+                        <div key={j} className="text-xs text-text-secondary flex gap-2">
+                          <span className="text-text-muted w-10">{d.timestamp_pct}%</span>
+                          <span>{d.player}</span>
+                          <span className="text-text-muted">— {d.ability}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )
+              ))}
+            </div>
+          </details>
+        </div>
+      )}
+
+      {/* Wipe Analysis */}
+      {wipeData && wipeData.length > 0 && (
+        <div className="mt-4">
+          <details className="bg-bg-surface border border-border-default rounded-xl overflow-hidden">
+            <summary className="p-4 cursor-pointer text-sm font-semibold text-text-primary hover:bg-bg-hover transition-colors select-none">
+              Wipe Analysis ({wipeData.reduce((sum: number, e: any) => sum + e.wipe_count, 0)} wipes)
+            </summary>
+            <div className="p-4 pt-0 space-y-4">
+              {wipeData.map((encounter: any) => (
+                <div key={encounter.encounter_name}>
+                  <div className="text-sm font-medium text-text-primary mb-2">
+                    {encounter.encounter_name}
+                    <span className="text-text-muted ml-2 text-xs">
+                      {encounter.wipe_count} wipe{encounter.wipe_count !== 1 ? 's' : ''}, {encounter.kill_count} kill{encounter.kill_count !== 1 ? 's' : ''}
+                    </span>
+                  </div>
+                  <div className="space-y-2">
+                    {encounter.wipes.map((wipe: any, i: number) => (
+                      <div key={i} className="p-2 rounded bg-danger/5 border border-danger/10 text-xs">
+                        <div className="flex gap-3 mb-1">
+                          <span className="text-text-secondary">{wipe.duration_s}s</span>
+                          <span className="text-danger">Boss at {wipe.boss_pct}%</span>
+                          <span className="text-text-muted">{wipe.deaths.length} deaths</span>
+                        </div>
+                        {wipe.deaths.length > 0 && (
+                          <div className="space-y-0.5 text-text-muted">
+                            {wipe.deaths.slice(0, 5).map((d: any, j: number) => (
+                              <div key={j}>{d.timestamp_pct}% — {d.player} ({d.ability})</div>
+                            ))}
+                            {wipe.deaths.length > 5 && <div>...and {wipe.deaths.length - 5} more</div>}
+                          </div>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </details>
+        </div>
       )}
     </Layout>
   )
