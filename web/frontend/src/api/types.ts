@@ -121,3 +121,12 @@ export interface SyncStatusEntry {
   status: string
   error_message: string | null
 }
+
+export interface TrendPoint {
+  date: string
+  report_code: string
+  overall_score: number
+  parse_score: number
+  utility_score: number | null
+  consumables_score: number | null
+}

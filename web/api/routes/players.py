@@ -176,3 +176,31 @@ async def get_player_attendance(name: str, weeks: int = Query(default=4, ge=1, l
         })
 
     return list(weeks_data.values())[:weeks]
+
+
+@router.get("/{name}/trends")
+async def get_player_trends(name: str, weeks: int = Query(default=8, ge=1, le=52), db: AsyncSession = Depends(get_db)):
+    result = await db.execute(select(Player).where(Player.name == name))
+    player = result.scalar_one_or_none()
+    if not player:
+        raise HTTPException(status_code=404, detail="Player not found")
+
+    cutoff = datetime.utcnow() - timedelta(weeks=weeks)
+    scores_result = await db.execute(
+        select(Score)
+        .where(Score.player_id == player.id, Score.recorded_at >= cutoff)
+        .order_by(Score.recorded_at.asc())
+    )
+    scores = scores_result.scalars().all()
+
+    return [
+        {
+            "date": s.recorded_at.isoformat() if s.recorded_at else None,
+            "report_code": s.report_code,
+            "overall_score": round(s.overall_score, 1),
+            "parse_score": round(s.parse_score, 1),
+            "utility_score": round(s.utility_score, 1) if s.utility_score is not None else None,
+            "consumables_score": round(s.consumables_score, 1) if s.consumables_score is not None else None,
+        }
+        for s in scores
+    ]

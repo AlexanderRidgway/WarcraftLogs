@@ -8,6 +8,7 @@ import ScoreCard from '../components/ScoreCard'
 import ParseBar from '../components/ParseBar'
 import GearGrid from '../components/GearGrid'
 import { SkeletonTable, SkeletonCard } from '../components/Skeleton'
+import TrendChart from '../components/TrendChart'
 
 type Tab = 'performance' | 'gear' | 'attendance'
 
@@ -38,6 +39,12 @@ export default function PlayerProfile() {
     queryKey: ['player-attendance', name, weeks],
     queryFn: () => api.players.attendance(name!, weeks),
     enabled: !!name && tab === 'attendance',
+  })
+
+  const { data: trends } = useQuery({
+    queryKey: ['trends', name, weeks],
+    queryFn: () => api.players.trends(name!, weeks),
+    enabled: !!name && tab === 'performance',
   })
 
   if (isLoading) return <Layout><div className="space-y-4"><SkeletonCard /><SkeletonCard /></div></Layout>
@@ -114,6 +121,8 @@ export default function PlayerProfile() {
 
       {/* Performance tab */}
       {tab === 'performance' && (
+        <>
+        {trends && trends.length > 1 && <TrendChart data={trends} />}
         <div className="bg-bg-surface border border-border-default rounded-xl overflow-hidden">
           <table className="w-full">
             <thead>
@@ -144,6 +153,7 @@ export default function PlayerProfile() {
             </tbody>
           </table>
         </div>
+        </>
       )}
 
       {/* Gear tab */}
