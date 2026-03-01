@@ -27,3 +27,8 @@ output "log_group" {
   description = "CloudWatch Log Group name"
   value       = aws_cloudwatch_log_group.bot.name
 }
+
+output "elastic_ip" {
+  description = "Elastic IP for crankguild.com DNS"
+  value       = aws_eip.bot.public_ip
+}

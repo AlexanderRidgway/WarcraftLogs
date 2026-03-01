@@ -48,3 +48,11 @@ resource "aws_instance" "bot" {
     Name = var.project_name
   }
 }
+
+resource "aws_eip" "bot" {
+  instance = aws_instance.bot.id
+
+  tags = {
+    Name = "${var.project_name}-eip"
+  }
+}
