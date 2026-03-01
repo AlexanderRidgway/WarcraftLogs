@@ -52,7 +52,7 @@ export default function PlayerProfile() {
 
   return (
     <Layout>
-      <h1><ClassIcon className={player.class_name} name={player.name} /></h1>
+      <h1><ClassIcon className={player.class_name} name={player.name} size={36} /></h1>
       <p style={{ color: '#8b949e', textTransform: 'capitalize' }}>{player.class_name} — {player.server} ({player.region.toUpperCase()})</p>
 
       <div style={{ display: 'flex', gap: '1rem', marginBottom: '1.5rem' }}>

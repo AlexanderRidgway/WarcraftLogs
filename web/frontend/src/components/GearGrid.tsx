@@ -46,7 +46,7 @@ export default function GearGrid({ gear, issues }: { gear: GearItem[]; issues: {
             <div style={{ fontSize: 11, color: '#8b949e' }}>{slotName}</div>
             <div style={{ fontSize: 14 }}>
               <a
-                href={`https://tbc.wowhead.com/item=${item.item_id}`}
+                href={`https://tbc.wowhead.com/item=${item.item_id}${item.permanent_enchant ? `&ench=${item.permanent_enchant}` : ''}`}
                 target="_blank"
                 rel="noopener noreferrer"
                 style={{ color: QUALITY_COLORS[item.quality], textDecoration: 'none' }}
@@ -59,14 +59,7 @@ export default function GearGrid({ gear, issues }: { gear: GearItem[]; issues: {
             </div>
             {item.permanent_enchant && (
               <div style={{ fontSize: 11, color: '#1eff00', marginTop: 2 }}>
-                <a
-                  href={`https://tbc.wowhead.com/spell=${item.permanent_enchant}`}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  style={{ color: '#1eff00', textDecoration: 'none', fontSize: 11 }}
-                >
-                  Enchant #{item.permanent_enchant}
-                </a>
+                ✨ Enchanted
               </div>
             )}
             {issue && <div style={{ fontSize: 11, color: '#ff6b6b', marginTop: 2 }}>{issue}</div>}
