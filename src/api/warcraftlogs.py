@@ -287,6 +287,43 @@ class WarcraftLogsClient:
             result.append({"name": p["name"], "gear": gear})
         return result
 
+    async def get_report_player_specs(self, report_code: str) -> dict[str, str]:
+        """Return a mapping of player name -> spec name from the Summary table.
+
+        The Summary table's playerDetails groups players by role (tanks, healers, dps)
+        and each player entry has a 'type' (class) and 'specs' array. This is more
+        reliable than the rankings endpoint for class/spec identification.
+        """
+        try:
+            table_data = await self._query_table(report_code, None, 0, 999999999999, "Summary")
+        except Exception:
+            logger.warning("Failed to fetch Summary table for specs in %s", report_code)
+            return {}
+        player_details = table_data.get("playerDetails", {})
+        all_players = []
+        if isinstance(player_details, dict):
+            for role_players in player_details.values():
+                if isinstance(role_players, list):
+                    all_players.extend(role_players)
+        elif isinstance(player_details, list):
+            all_players = player_details
+
+        spec_map: dict[str, str] = {}
+        for p in all_players:
+            name = p.get("name", "")
+            if not name:
+                continue
+            # 'type' field is the class name (e.g., "Warlock")
+            cls = p.get("type", "")
+            # 'specs' is a list of spec objects, usually just one entry with 'spec' field
+            specs = p.get("specs", [])
+            spec_name = specs[0].get("spec", "") if specs else ""
+            if cls and spec_name:
+                spec_map[name] = f"{cls}:{spec_name}"
+            elif cls:
+                spec_map[name] = cls
+        return spec_map
+
     async def get_report_rankings(self, report_code: str) -> list:
         """Fetch per-player rankings for all fights in a report.
 

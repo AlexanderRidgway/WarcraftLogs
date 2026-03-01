@@ -83,6 +83,9 @@ async def process_report(
     timerange = await wcl.get_report_timerange(report_code)
     gear_raw = await wcl.get_report_gear(report_code)
 
+    # Get accurate spec info from Summary table (more reliable than rankings)
+    player_specs = await wcl.get_report_player_specs(report_code)
+
     source_map = {p["name"]: p["id"] for p in players_raw}
     consumables_profile = config.get_consumables()
 
@@ -93,10 +96,14 @@ async def process_report(
 
     for player in rankings_raw:
         name = player["name"]
-        spec = player.get("spec", "")
-        cls = player_classes.get(name, player.get("class", ""))
+        # Prefer spec from Summary table playerDetails, fall back to rankings
+        if name in player_specs:
+            spec_key = player_specs[name].lower()
+        else:
+            spec = player.get("spec", "")
+            cls = player_classes.get(name, player.get("class", ""))
+            spec_key = _validate_spec_key(cls, spec) if cls else None
         parse = player.get("rankPercent", 0)
-        spec_key = _validate_spec_key(cls, spec) if cls else None
         spec_profile = config.get_spec(spec_key) if spec_key else None
 
         rankings.append({
