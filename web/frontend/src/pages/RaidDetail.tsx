@@ -1,6 +1,9 @@
+import { useState } from 'react'
 import { useParams } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts'
 import { api } from '../api/client'
+import { CHART_COLORS, CHART_DEFAULTS } from '../components/ChartTheme'
 import Layout from '../components/Layout'
 import ClassIcon from '../components/ClassIcon'
 import ParseBar from '../components/ParseBar'
@@ -24,6 +27,20 @@ export default function RaidDetail() {
     queryKey: ['wipes', code],
     queryFn: () => api.reports.wipes(code!),
     enabled: !!code,
+  })
+
+  const [expandedFight, setExpandedFight] = useState<number | null>(null)
+
+  const { data: fights } = useQuery({
+    queryKey: ['fights', code],
+    queryFn: () => api.reports.fights(code!),
+    enabled: !!code,
+  })
+
+  const { data: fightDetail } = useQuery({
+    queryKey: ['fight-detail', code, expandedFight],
+    queryFn: () => api.reports.fightDetail(code!, expandedFight!),
+    enabled: !!code && expandedFight !== null,
   })
 
   if (isLoading) return <Layout><div className="bg-bg-surface border border-border-default rounded-xl overflow-hidden"><table className="w-full"><tbody><SkeletonTable rows={8} cols={5} /></tbody></table></div></Layout>
@@ -189,6 +206,97 @@ export default function RaidDetail() {
               ))}
             </div>
           </details>
+        </div>
+      )}
+
+      {/* Boss Scorecards */}
+      {fights && fights.length > 0 && (
+        <div className="mt-6">
+          <h2 className="text-sm font-semibold text-text-primary mb-3">Boss Scorecards</h2>
+          <div className="space-y-2">
+            {fights.map((fight: any) => (
+              <div key={fight.fight_id} className="bg-bg-surface border border-border-default rounded-xl overflow-hidden">
+                <button
+                  onClick={() => setExpandedFight(expandedFight === fight.fight_id ? null : fight.fight_id)}
+                  className="w-full p-3 flex items-center justify-between text-left cursor-pointer bg-transparent border-none hover:bg-bg-hover transition-colors"
+                >
+                  <div className="flex items-center gap-2">
+                    <span className={`w-2 h-2 rounded-full ${fight.kill ? 'bg-success' : 'bg-danger'}`} />
+                    <span className="text-sm font-medium text-text-primary">{fight.encounter_name}</span>
+                    <span className="text-xs text-text-muted">{fight.duration_s}s</span>
+                    {!fight.kill && <span className="text-xs text-danger">{fight.fight_percentage}%</span>}
+                  </div>
+                  <svg className={`w-4 h-4 text-text-muted transition-transform ${expandedFight === fight.fight_id ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                  </svg>
+                </button>
+
+                {expandedFight === fight.fight_id && fightDetail && (
+                  <div className="p-4 border-t border-border-default">
+                    <div className="flex gap-3 text-xs text-text-muted mb-3">
+                      <span>{fightDetail.attempts} attempt{fightDetail.attempts !== 1 ? 's' : ''}</span>
+                      <span>{fightDetail.duration_s}s duration</span>
+                      <span>{fightDetail.players.length} players</span>
+                    </div>
+
+                    {/* DPS Chart */}
+                    {fightDetail.players.some((p: any) => p.dps > 0) && (
+                      <div className="mb-4">
+                        <div className="text-xs text-text-muted mb-2">DPS</div>
+                        <ResponsiveContainer width="100%" height={Math.max(150, fightDetail.players.filter((p: any) => p.dps > 0).length * 28)}>
+                          <BarChart data={fightDetail.players.filter((p: any) => p.dps > 0)} layout="vertical">
+                            <CartesianGrid stroke={CHART_DEFAULTS.gridStroke} strokeDasharray="3 3" />
+                            <XAxis type="number" tick={CHART_DEFAULTS.tick} axisLine={CHART_DEFAULTS.axisLine} />
+                            <YAxis type="category" dataKey="name" tick={CHART_DEFAULTS.tick} axisLine={CHART_DEFAULTS.axisLine} width={90} />
+                            <Tooltip contentStyle={{ backgroundColor: CHART_COLORS.bg, border: `1px solid ${CHART_COLORS.grid}`, borderRadius: 8 }} />
+                            <Bar dataKey="dps" fill={CHART_COLORS.danger} />
+                          </BarChart>
+                        </ResponsiveContainer>
+                      </div>
+                    )}
+
+                    {/* HPS Chart */}
+                    {fightDetail.players.some((p: any) => p.hps > 0) && (
+                      <div className="mb-4">
+                        <div className="text-xs text-text-muted mb-2">HPS</div>
+                        <ResponsiveContainer width="100%" height={Math.max(100, fightDetail.players.filter((p: any) => p.hps > 0).length * 28)}>
+                          <BarChart data={fightDetail.players.filter((p: any) => p.hps > 0)} layout="vertical">
+                            <CartesianGrid stroke={CHART_DEFAULTS.gridStroke} strokeDasharray="3 3" />
+                            <XAxis type="number" tick={CHART_DEFAULTS.tick} axisLine={CHART_DEFAULTS.axisLine} />
+                            <YAxis type="category" dataKey="name" tick={CHART_DEFAULTS.tick} axisLine={CHART_DEFAULTS.axisLine} width={90} />
+                            <Tooltip contentStyle={{ backgroundColor: CHART_COLORS.bg, border: `1px solid ${CHART_COLORS.grid}`, borderRadius: 8 }} />
+                            <Bar dataKey="hps" fill={CHART_COLORS.success} />
+                          </BarChart>
+                        </ResponsiveContainer>
+                      </div>
+                    )}
+
+                    {/* Player table */}
+                    <table className="w-full text-xs">
+                      <thead>
+                        <tr className="border-b border-border-default">
+                          <th className="p-2 text-left text-text-muted">Player</th>
+                          <th className="p-2 text-left text-text-muted">DPS</th>
+                          <th className="p-2 text-left text-text-muted">HPS</th>
+                          <th className="p-2 text-left text-text-muted">Deaths</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {fightDetail.players.map((p: any) => (
+                          <tr key={p.name} className="border-b border-border-default/50">
+                            <td className="p-2 text-text-primary">{p.name}</td>
+                            <td className="p-2 text-text-secondary tabular-nums">{p.dps.toLocaleString()}</td>
+                            <td className="p-2 text-text-secondary tabular-nums">{p.hps.toLocaleString()}</td>
+                            <td className="p-2">{p.deaths > 0 ? <span className="text-danger">{p.deaths}</span> : <span className="text-success">0</span>}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
+              </div>
+            ))}
+          </div>
         </div>
       )}
     </Layout>

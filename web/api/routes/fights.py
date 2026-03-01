@@ -1,9 +1,9 @@
-from fastapi import APIRouter, Depends
-from sqlalchemy import select
+from fastapi import APIRouter, Depends, HTTPException
+from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from web.api.database import get_db
-from web.api.models import Fight, Death, Player
+from web.api.models import Fight, Death, FightPlayerStats, Player
 
 router = APIRouter(prefix="/api/reports", tags=["fights"])
 
@@ -99,3 +99,67 @@ async def get_report_wipes(code: str, db: AsyncSession = Depends(get_db)):
 
     # Only return encounters that have wipes
     return [e for e in encounters.values() if e["wipe_count"] > 0]
+
+
+@router.get("/{code}/fights")
+async def list_report_fights(code: str, db: AsyncSession = Depends(get_db)):
+    fights_result = await db.execute(
+        select(Fight).where(Fight.report_code == code).order_by(Fight.start_time)
+    )
+    fights = fights_result.scalars().all()
+    return [
+        {
+            "fight_id": f.fight_id,
+            "encounter_name": f.encounter_name,
+            "kill": f.kill,
+            "duration_s": round(f.duration_ms / 1000),
+            "fight_percentage": f.fight_percentage,
+        }
+        for f in fights
+    ]
+
+
+@router.get("/{code}/fights/{fight_id}")
+async def get_fight_detail(code: str, fight_id: int, db: AsyncSession = Depends(get_db)):
+    # Find the fight
+    fight_result = await db.execute(
+        select(Fight).where(Fight.report_code == code, Fight.fight_id == fight_id)
+    )
+    fight = fight_result.scalar_one_or_none()
+    if not fight:
+        raise HTTPException(status_code=404, detail="Fight not found")
+
+    # Count total attempts for this boss in this report
+    attempts_result = await db.execute(
+        select(func.count(Fight.id))
+        .where(Fight.report_code == code, Fight.encounter_name == fight.encounter_name)
+    )
+    attempts = attempts_result.scalar() or 0
+
+    # Get player stats
+    stats_result = await db.execute(
+        select(FightPlayerStats, Player.name, Player.class_name)
+        .join(Player, Player.id == FightPlayerStats.player_id)
+        .where(FightPlayerStats.fight_db_id == fight.id)
+        .order_by(FightPlayerStats.dps.desc())
+    )
+
+    players = []
+    for stat, player_name, class_name in stats_result.all():
+        players.append({
+            "name": player_name,
+            "class_name": class_name,
+            "dps": round(stat.dps, 1) if stat.dps else 0,
+            "hps": round(stat.hps, 1) if stat.hps else 0,
+            "damage_done": stat.damage_done or 0,
+            "healing_done": stat.healing_done or 0,
+            "deaths": stat.deaths_count or 0,
+        })
+
+    return {
+        "encounter_name": fight.encounter_name,
+        "kill": fight.kill,
+        "duration_s": round(fight.duration_ms / 1000),
+        "attempts": attempts,
+        "players": players,
+    }

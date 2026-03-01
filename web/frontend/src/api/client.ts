@@ -51,6 +51,8 @@ export const api = {
     get: (code: string) => fetchJson<import('./types').ReportDetail>(`/reports/${code}`),
     deaths: (code: string) => fetchJson<any>(`/reports/${code}/deaths`),
     wipes: (code: string) => fetchJson<any[]>(`/reports/${code}/wipes`),
+    fights: (code: string) => fetchJson<any[]>(`/reports/${code}/fights`),
+    fightDetail: (code: string, fightId: number) => fetchJson<any>(`/reports/${code}/fights/${fightId}`),
   },
   attendance: (weeks = 4) => fetchJson<import('./types').PlayerAttendance[]>(`/attendance?weeks=${weeks}`),
   config: {
