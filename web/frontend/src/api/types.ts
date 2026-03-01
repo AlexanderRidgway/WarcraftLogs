@@ -92,6 +92,12 @@ export interface ReportDetail extends ReportSummary {
   }[]
 }
 
+export interface AttendanceReport {
+  code: string
+  date: string
+  zone_name: string
+}
+
 export interface AttendanceWeek {
   year: number
   week: number
@@ -101,6 +107,7 @@ export interface AttendanceWeek {
     clear_count: number
     required: number
     met: boolean
+    reports?: AttendanceReport[]
   }[]
 }
 

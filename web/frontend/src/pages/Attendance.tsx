@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
+import { Link } from 'react-router-dom'
 import { api } from '../api/client'
 import Layout from '../components/Layout'
 import ClassIcon from '../components/ClassIcon'
@@ -44,7 +45,9 @@ export default function Attendance() {
           {attendance?.map((player, i) => (
             <div key={i} className="bg-bg-surface border border-border-default rounded-xl p-4 hover:border-border-hover transition-colors">
               <div className="mb-3">
-                <ClassIcon className={player.class_name} name={player.name} />
+                <Link to={`/player/${player.name}`} className="no-underline">
+                  <ClassIcon className={player.class_name} name={player.name} />
+                </Link>
               </div>
               <div className="flex flex-wrap gap-2">
                 {player.weeks.map((w, j) => (

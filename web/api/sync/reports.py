@@ -243,15 +243,17 @@ async def process_report(
                     last_hit = d["damage"]["entries"][-1]
                     killing_ability = last_hit.get("ability", {}).get("name")
                     damage_taken = last_hit.get("amount")
+                # deathTime is relative to report start; convert to fight-relative
+                death_time = d.get("deathTime", 0) - f.get("startTime", 0)
                 deaths.append({
                     "fight_id": f["id"],
                     "player_name": d["name"],
-                    "timestamp_ms": d.get("deathTime", 0),
+                    "timestamp_ms": max(death_time, 0),
                     "killing_ability": killing_ability,
                     "damage_taken": damage_taken,
                 })
-        except Exception:
-            logger.warning("Failed to fetch deaths for fight %s in %s", f["id"], report_code)
+        except Exception as e:
+            logger.warning("Failed to fetch deaths for fight %s in %s: %s", f["id"], report_code, e)
 
         # Fetch per-player stats for this fight
         try:
@@ -267,8 +269,8 @@ async def process_report(
                     "healing_done": s["healing_done"],
                     "deaths_count": player_deaths,
                 })
-        except Exception:
-            logger.warning("Failed to fetch stats for fight %s in %s", f["id"], report_code)
+        except Exception as e:
+            logger.warning("Failed to fetch stats for fight %s in %s: %s", f["id"], report_code, e)
 
     return {
         "rankings": rankings,

@@ -1,9 +1,14 @@
+import logging
+import os
+
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from web.api.database import get_db
 from web.api.models import Fight, Death, FightPlayerStats, Player
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/api/reports", tags=["fights"])
 
@@ -117,6 +122,68 @@ async def list_report_fights(code: str, db: AsyncSession = Depends(get_db)):
         }
         for f in fights
     ]
+
+
+@router.get("/{code}/debug-wcl")
+async def debug_wcl_fights(code: str, db: AsyncSession = Depends(get_db)):
+    """Debug endpoint: test WCL API calls for deaths and fight stats."""
+    from src.api.warcraftlogs import WarcraftLogsClient
+
+    client_id = os.environ.get("WARCRAFTLOGS_CLIENT_ID", "")
+    client_secret = os.environ.get("WARCRAFTLOGS_CLIENT_SECRET", "")
+    if not client_id or not client_secret:
+        return {"error": "WCL credentials not configured"}
+
+    wcl = WarcraftLogsClient(client_id, client_secret)
+
+    # Get first fight from DB
+    fight_result = await db.execute(
+        select(Fight).where(Fight.report_code == code).order_by(Fight.start_time).limit(1)
+    )
+    fight = fight_result.scalar_one_or_none()
+    if not fight:
+        return {"error": "No fights in DB for this report"}
+
+    result = {
+        "fight": {
+            "fight_id": fight.fight_id,
+            "encounter_name": fight.encounter_name,
+            "start_time": fight.start_time,
+            "end_time": fight.end_time,
+            "duration_ms": fight.duration_ms,
+        },
+        "db_death_count": 0,
+        "db_stats_count": 0,
+    }
+
+    # Check DB counts
+    death_count = await db.execute(
+        select(func.count(Death.id)).where(Death.fight_db_id == fight.id)
+    )
+    result["db_death_count"] = death_count.scalar() or 0
+
+    stats_count = await db.execute(
+        select(func.count(FightPlayerStats.id)).where(FightPlayerStats.fight_db_id == fight.id)
+    )
+    result["db_stats_count"] = stats_count.scalar() or 0
+
+    # Test WCL deaths API
+    try:
+        death_entries = await wcl.get_report_deaths(code, fight.start_time, fight.end_time)
+        result["wcl_deaths_raw_count"] = len(death_entries)
+        result["wcl_deaths_sample"] = death_entries[:2] if death_entries else []
+    except Exception as e:
+        result["wcl_deaths_error"] = str(e)
+
+    # Test WCL fight stats API
+    try:
+        stats = await wcl.get_fight_stats(code, fight.start_time, fight.end_time)
+        result["wcl_stats_player_count"] = len(stats)
+        result["wcl_stats_sample"] = {k: v for k, v in list(stats.items())[:2]}
+    except Exception as e:
+        result["wcl_stats_error"] = str(e)
+
+    return result
 
 
 @router.get("/{code}/fights/{fight_id}")

@@ -1,11 +1,11 @@
 import { useState } from 'react'
-import { useParams } from 'react-router-dom'
+import { useParams, Link } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts'
 import { api } from '../api/client'
 import { CHART_COLORS, CHART_DEFAULTS } from '../components/ChartTheme'
 import Layout from '../components/Layout'
-import ClassIcon from '../components/ClassIcon'
+import ClassIcon, { getSpecLabel } from '../components/ClassIcon'
 import ParseBar from '../components/ParseBar'
 import { SkeletonTable } from '../components/Skeleton'
 
@@ -76,9 +76,11 @@ export default function RaidDetail() {
             {report.scores.map((s, i) => (
               <tr key={i} className="border-b border-border-default/50 hover:bg-bg-hover transition-colors">
                 <td className="p-3">
-                  <ClassIcon className={s.class_name} name={s.player_name} />
+                  <Link to={`/player/${s.player_name}`} className="no-underline">
+                    <ClassIcon className={s.class_name} name={s.player_name} />
+                  </Link>
                 </td>
-                <td className="p-3 text-sm text-text-secondary hidden sm:table-cell">{s.spec}</td>
+                <td className="p-3 text-sm text-text-secondary capitalize hidden sm:table-cell">{getSpecLabel(s.spec)}</td>
                 <td className="p-3 text-sm font-semibold text-accent-gold tabular-nums">{s.overall_score.toFixed(1)}</td>
                 <td className="p-3"><ParseBar percent={s.parse_score} /></td>
               </tr>

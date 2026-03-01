@@ -1,10 +1,10 @@
 from fastapi import APIRouter, Depends, HTTPException, Query
-from sqlalchemy import select
+from sqlalchemy import select, and_
 from sqlalchemy.ext.asyncio import AsyncSession
 from datetime import datetime, timedelta
 
 from web.api.database import get_db
-from web.api.models import Player, Ranking, Score, GearSnapshot, UtilityData, ConsumablesData, AttendanceRecord
+from web.api.models import Player, Ranking, Score, GearSnapshot, UtilityData, ConsumablesData, AttendanceRecord, Report
 
 router = APIRouter(prefix="/api/players", tags=["players"])
 
@@ -162,17 +162,36 @@ async def get_player_attendance(name: str, weeks: int = Query(default=4, ge=1, l
     )
     records = records_result.scalars().all()
 
+    # Get all reports to match zone/week
+    reports_result = await db.execute(select(Report).order_by(Report.start_time.desc()))
+    all_reports = reports_result.scalars().all()
+
+    # Build a lookup: (year, week, zone_id) -> list of report codes
+    report_lookup: dict[tuple, list] = {}
+    for rpt in all_reports:
+        iso = rpt.start_time.isocalendar()
+        key = (iso[0], iso[1], rpt.zone_id)
+        if key not in report_lookup:
+            report_lookup[key] = []
+        report_lookup[key].append({
+            "code": rpt.code,
+            "date": rpt.start_time.isoformat(),
+            "zone_name": rpt.zone_name,
+        })
+
     weeks_data = {}
     for r in records:
         key = (r.year, r.week_number)
         if key not in weeks_data:
             weeks_data[key] = {"year": r.year, "week": r.week_number, "zones": []}
+        reports = report_lookup.get((r.year, r.week_number, r.zone_id), [])
         weeks_data[key]["zones"].append({
             "zone_id": r.zone_id,
             "zone_label": r.zone_label,
             "clear_count": r.clear_count,
             "required": r.required,
             "met": r.met,
+            "reports": reports,
         })
 
     return list(weeks_data.values())[:weeks]

@@ -1,9 +1,9 @@
 import { useState } from 'react'
-import { useParams } from 'react-router-dom'
+import { useParams, Link, useNavigate } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
 import { api } from '../api/client'
 import Layout from '../components/Layout'
-import ClassIcon from '../components/ClassIcon'
+import ClassIcon, { getSpecLabel } from '../components/ClassIcon'
 import ScoreCard from '../components/ScoreCard'
 import ParseBar from '../components/ParseBar'
 import GearGrid from '../components/GearGrid'
@@ -14,6 +14,7 @@ type Tab = 'performance' | 'gear' | 'attendance'
 
 export default function PlayerProfile() {
   const { name } = useParams<{ name: string }>()
+  const navigate = useNavigate()
   const [tab, setTab] = useState<Tab>('performance')
   const [weeks, setWeeks] = useState(4)
 
@@ -172,7 +173,7 @@ export default function PlayerProfile() {
           <table className="w-full">
             <thead>
               <tr className="border-b border-border-default">
-                <th className="p-3 text-left text-xs font-semibold text-text-muted uppercase tracking-wider">Boss</th>
+                <th className="p-3 text-left text-xs font-semibold text-text-muted uppercase tracking-wider">Date</th>
                 <th className="p-3 text-left text-xs font-semibold text-text-muted uppercase tracking-wider">Spec</th>
                 <th className="p-3 text-left text-xs font-semibold text-text-muted uppercase tracking-wider">Parse</th>
                 <th className="p-3 text-left text-xs font-semibold text-text-muted uppercase tracking-wider hidden sm:table-cell">Report</th>
@@ -185,9 +186,9 @@ export default function PlayerProfile() {
                 <tr><td colSpan={4} className="p-6 text-center text-sm text-danger">Failed to load rankings</td></tr>
               ) : rankings && rankings.length > 0 ? (
                 rankings.map((r, i) => (
-                  <tr key={i} className="border-b border-border-default/50 hover:bg-bg-hover transition-colors">
-                    <td className="p-3 text-sm text-text-primary">{r.encounter_name}</td>
-                    <td className="p-3 text-sm text-text-secondary">{r.spec}</td>
+                  <tr key={i} className="border-b border-border-default/50 hover:bg-bg-hover transition-colors cursor-pointer" onClick={() => navigate(`/raids/${r.report_code}`)}>
+                    <td className="p-3 text-sm text-text-primary">{r.recorded_at ? new Date(r.recorded_at).toLocaleDateString() : r.encounter_name}</td>
+                    <td className="p-3 text-sm text-text-secondary capitalize">{getSpecLabel(r.spec)}</td>
                     <td className="p-3"><ParseBar percent={r.rank_percent} /></td>
                     <td className="p-3 text-xs text-text-muted font-mono hidden sm:table-cell">{r.report_code}</td>
                   </tr>
@@ -225,18 +226,38 @@ export default function PlayerProfile() {
               <div className="font-semibold text-sm text-text-primary mb-2">
                 Week {week.week}, {week.year}
               </div>
-              <div className="flex flex-wrap gap-3">
+              <div className="flex flex-col gap-2">
                 {week.zones?.map((z, j) => (
-                  <span
-                    key={j}
-                    className={`text-sm px-3 py-1 rounded-lg border ${
-                      z.met
-                        ? 'border-success/30 bg-success/10 text-success'
-                        : 'border-danger/30 bg-danger/10 text-danger'
-                    }`}
-                  >
-                    {z.met ? '\u2705' : '\u274C'} {z.zone_label} ({z.clear_count}/{z.required})
-                  </span>
+                  <details key={j} className="group">
+                    <summary
+                      className={`text-sm px-3 py-1.5 rounded-lg border cursor-pointer select-none list-none flex items-center gap-1.5 ${
+                        z.met
+                          ? 'border-success/30 bg-success/10 text-success'
+                          : 'border-danger/30 bg-danger/10 text-danger'
+                      }`}
+                    >
+                      <svg className="w-3 h-3 transition-transform group-open:rotate-90" fill="currentColor" viewBox="0 0 20 20">
+                        <path d="M6 4l8 6-8 6V4z" />
+                      </svg>
+                      {z.met ? '\u2705' : '\u274C'} {z.zone_label} ({z.clear_count}/{z.required})
+                    </summary>
+                    <div className="ml-4 mt-1 space-y-1">
+                      {z.reports && z.reports.length > 0 ? (
+                        z.reports.map((rpt, k) => (
+                          <Link
+                            key={k}
+                            to={`/raids/${rpt.code}`}
+                            className="block text-xs text-text-secondary hover:text-accent-gold transition-colors no-underline py-0.5"
+                          >
+                            {new Date(rpt.date).toLocaleDateString()} — {rpt.zone_name}
+                            <span className="text-text-muted ml-1 font-mono">{rpt.code}</span>
+                          </Link>
+                        ))
+                      ) : (
+                        <span className="text-xs text-text-muted">No matching reports found</span>
+                      )}
+                    </div>
+                  </details>
                 ))}
               </div>
             </div>

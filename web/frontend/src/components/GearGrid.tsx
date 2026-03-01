@@ -8,6 +8,8 @@ const SLOT_NAMES: Record<number, string> = {
   15: 'Main Hand', 16: 'Off Hand', 17: 'Ranged',
 }
 
+const EXCLUDED_SLOTS = new Set([3, 18]) // Shirt, Tabard — cosmetic
+
 const QUALITY_BORDERS: Record<number, string> = {
   0: 'border-l-quality-poor', 1: 'border-l-quality-common', 2: 'border-l-quality-uncommon',
   3: 'border-l-quality-rare', 4: 'border-l-quality-epic', 5: 'border-l-quality-legendary',
@@ -88,7 +90,7 @@ export default function GearGrid({ gear, issues }: { gear: GearItem[]; issues: {
 
   return (
     <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-      {gear.map(item => {
+      {gear.filter(item => !EXCLUDED_SLOTS.has(item.slot)).map(item => {
         const slotName = SLOT_NAMES[item.slot] || `Slot ${item.slot}`
         const issue = issueMap.get(slotName)
         const activeGems = item.gems?.filter(g => g.id > 0) || []

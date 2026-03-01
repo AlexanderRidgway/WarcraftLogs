@@ -35,7 +35,7 @@ async def get_checklist(db: AsyncSession = Depends(get_db)):
             )
             gear = gear_result.scalars().all()
 
-            ENCHANT_SLOTS = {0, 2, 4, 5, 6, 7, 8, 9, 14, 15}  # Head, Shoulder, Chest, Waist, Legs, Feet, Wrist, Hands, Cloak, Weapon
+            ENCHANT_SLOTS = {0, 2, 4, 6, 7, 8, 9, 14, 15}  # Head, Shoulder, Chest, Legs, Feet, Wrist, Hands, Cloak, Weapon
             for item in gear:
                 if item.slot in ENCHANT_SLOTS and not item.permanent_enchant:
                     SLOT_NAMES = {0: 'Head', 2: 'Shoulder', 4: 'Chest', 5: 'Waist', 6: 'Legs', 7: 'Feet', 8: 'Wrist', 9: 'Hands', 14: 'Cloak', 15: 'Weapon'}
