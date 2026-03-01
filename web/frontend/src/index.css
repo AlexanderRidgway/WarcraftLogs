@@ -1,54 +1,105 @@
-:root {
-  font-family: system-ui, Avenir, Helvetica, Arial, sans-serif;
-  line-height: 1.5;
-  font-weight: 400;
+@import "tailwindcss";
 
-  color: rgba(255, 255, 255, 0.87);
-  background-color: #0d1117;
+@theme {
+  /* Background colors */
+  --color-bg-base: #0a0e14;
+  --color-bg-surface: #12161f;
+  --color-bg-elevated: #1a1f2e;
+  --color-bg-hover: #222838;
 
-  font-synthesis: none;
-  text-rendering: optimizeLegibility;
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
+  /* Border colors */
+  --color-border-default: #2a2f3e;
+  --color-border-hover: #3a3f4e;
+
+  /* Accent */
+  --color-accent-gold: #c9a959;
+  --color-accent-gold-light: #e0c872;
+  --color-accent-gold-dim: #8a7a3a;
+
+  /* Text */
+  --color-text-primary: #e8e6e3;
+  --color-text-secondary: #8a8f98;
+  --color-text-muted: #5a5f68;
+
+  /* Status */
+  --color-success: #2ea043;
+  --color-danger: #da3633;
+  --color-info: #58a6ff;
+
+  /* WoW class colors */
+  --color-class-warrior: #C79C6E;
+  --color-class-paladin: #F58CBA;
+  --color-class-hunter: #ABD473;
+  --color-class-rogue: #FFF569;
+  --color-class-priest: #FFFFFF;
+  --color-class-shaman: #0070DE;
+  --color-class-mage: #69CCF0;
+  --color-class-warlock: #9482C9;
+  --color-class-druid: #FF7D0A;
+
+  /* Parse tier colors */
+  --color-parse-legendary: #e268a8;
+  --color-parse-epic: #a335ee;
+  --color-parse-rare: #0070dd;
+  --color-parse-uncommon: #1eff00;
+  --color-parse-common: #999999;
+
+  /* Item quality colors */
+  --color-quality-poor: #9d9d9d;
+  --color-quality-common: #ffffff;
+  --color-quality-uncommon: #1eff00;
+  --color-quality-rare: #0070dd;
+  --color-quality-epic: #a335ee;
+  --color-quality-legendary: #ff8000;
+
+  /* Sizing */
+  --width-sidebar: 240px;
+  --width-sidebar-collapsed: 64px;
 }
 
-a {
-  font-weight: 500;
-  color: #646cff;
-  text-decoration: inherit;
-}
-a:hover {
-  color: #535bf2;
-}
-
+/* Base styles */
 body {
+  background-color: var(--color-bg-base);
+  color: var(--color-text-primary);
+  font-family: system-ui, -apple-system, sans-serif;
   margin: 0;
-  min-width: 320px;
-  min-height: 100vh;
-  background-color: #0d1117;
 }
 
-h1 {
-  font-size: 3.2em;
-  line-height: 1.1;
+/* Scrollbar styling */
+::-webkit-scrollbar {
+  width: 8px;
+}
+::-webkit-scrollbar-track {
+  background: var(--color-bg-base);
+}
+::-webkit-scrollbar-thumb {
+  background: var(--color-border-default);
+  border-radius: 4px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: var(--color-border-hover);
 }
 
-button {
-  border-radius: 8px;
-  border: 1px solid transparent;
-  padding: 0.6em 1.2em;
-  font-size: 1em;
-  font-weight: 500;
-  font-family: inherit;
-  background-color: #1a1a1a;
-  cursor: pointer;
-  transition: border-color 0.25s;
-}
-button:hover {
-  border-color: #646cff;
-}
-button:focus,
-button:focus-visible {
-  outline: 4px auto -webkit-focus-ring-color;
+/* Skeleton animation */
+@keyframes shimmer {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
 }
 
+.skeleton {
+  background: linear-gradient(90deg, var(--color-bg-surface) 25%, var(--color-bg-elevated) 50%, var(--color-bg-surface) 75%);
+  background-size: 200% 100%;
+  animation: shimmer 1.5s infinite;
+  border-radius: 4px;
+}
+
+/* Toast animation */
+@keyframes slide-in {
+  from { transform: translateX(100%); opacity: 0; }
+  to { transform: translateX(0); opacity: 1; }
+}
+
+@keyframes slide-out {
+  from { transform: translateX(0); opacity: 1; }
+  to { transform: translateX(100%); opacity: 0; }
+}
