@@ -8,6 +8,7 @@ import RaidHistory from './pages/RaidHistory'
 import RaidDetail from './pages/RaidDetail'
 import Attendance from './pages/Attendance'
 import Config from './pages/Config'
+import Checklist from './pages/Checklist'
 import Login from './pages/Login'
 import ForgotPassword from './pages/ForgotPassword'
 import ResetPassword from './pages/ResetPassword'
@@ -29,6 +30,7 @@ export default function App() {
               <Route path="/raids" element={<RaidHistory />} />
               <Route path="/raids/:code" element={<RaidDetail />} />
               <Route path="/attendance" element={<Attendance />} />
+              <Route path="/checklist" element={<Checklist />} />
               <Route path="/config" element={<Config />} />
             </Routes>
           </BrowserRouter>

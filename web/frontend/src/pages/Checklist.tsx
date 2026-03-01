@@ -1,0 +1,103 @@
+import { useState } from 'react'
+import { useQuery } from '@tanstack/react-query'
+import { Link } from 'react-router-dom'
+import { api } from '../api/client'
+import Layout from '../components/Layout'
+import ClassIcon from '../components/ClassIcon'
+
+interface ChecklistPlayer {
+  name: string
+  class_name: string
+  readiness: 'green' | 'yellow' | 'red'
+  gear_issues: string[]
+  attendance_missed: boolean
+  consumables_avg: number | null
+}
+
+const READINESS_STYLES = {
+  green: 'bg-success/10 border-success/30 text-success',
+  yellow: 'bg-warning/10 border-warning/30 text-warning',
+  red: 'bg-danger/10 border-danger/30 text-danger',
+}
+
+const READINESS_LABEL = { green: 'Ready', yellow: 'Warning', red: 'Not Ready' }
+
+export default function Checklist() {
+  const [filter, setFilter] = useState<string | null>(null)
+
+  const { data, isLoading } = useQuery({
+    queryKey: ['checklist'],
+    queryFn: () => api.checklist(),
+  })
+
+  const players = data?.players || []
+  const filtered = filter ? players.filter((p: ChecklistPlayer) => p.readiness === filter) : players
+
+  const counts = {
+    green: players.filter((p: ChecklistPlayer) => p.readiness === 'green').length,
+    yellow: players.filter((p: ChecklistPlayer) => p.readiness === 'yellow').length,
+    red: players.filter((p: ChecklistPlayer) => p.readiness === 'red').length,
+  }
+
+  return (
+    <Layout>
+      <h1 className="text-2xl font-bold text-text-primary mb-6">Pre-Raid Checklist</h1>
+
+      {/* Summary cards */}
+      <div className="flex gap-3 mb-6">
+        {(['green', 'yellow', 'red'] as const).map(status => (
+          <button
+            key={status}
+            onClick={() => setFilter(filter === status ? null : status)}
+            className={`px-4 py-2 rounded-lg border text-sm font-medium transition-all cursor-pointer ${
+              filter === status ? READINESS_STYLES[status] : 'bg-bg-surface border-border-default text-text-secondary hover:border-border-hover'
+            }`}
+          >
+            {READINESS_LABEL[status]} ({counts[status]})
+          </button>
+        ))}
+      </div>
+
+      {/* Player list */}
+      <div className="space-y-2">
+        {isLoading ? (
+          <div className="text-text-muted text-sm">Loading checklist...</div>
+        ) : (
+          filtered.map((p: ChecklistPlayer) => (
+            <div
+              key={p.name}
+              className="bg-bg-surface border border-border-default rounded-xl p-4 flex items-start gap-4"
+            >
+              <div className={`w-2 h-2 rounded-full mt-2 flex-shrink-0 ${
+                p.readiness === 'green' ? 'bg-success' : p.readiness === 'yellow' ? 'bg-warning' : 'bg-danger'
+              }`} />
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center gap-2 mb-1">
+                  <Link to={`/player/${p.name}`} className="no-underline">
+                    <ClassIcon className={p.class_name} name={p.name} />
+                  </Link>
+                </div>
+                <div className="flex flex-wrap gap-2 text-xs">
+                  {p.gear_issues.map((issue, i) => (
+                    <span key={i} className="px-2 py-0.5 rounded bg-danger/10 text-danger border border-danger/20">{issue}</span>
+                  ))}
+                  {p.attendance_missed && (
+                    <span className="px-2 py-0.5 rounded bg-danger/10 text-danger border border-danger/20">Missed attendance last week</span>
+                  )}
+                  {p.consumables_avg !== null && p.consumables_avg < 80 && (
+                    <span className="px-2 py-0.5 rounded bg-warning/10 text-warning border border-warning/20">
+                      Consumables: {p.consumables_avg}%
+                    </span>
+                  )}
+                  {p.readiness === 'green' && (
+                    <span className="px-2 py-0.5 rounded bg-success/10 text-success border border-success/20">All clear</span>
+                  )}
+                </div>
+              </div>
+            </div>
+          ))
+        )}
+      </div>
+    </Layout>
+  )
+}
