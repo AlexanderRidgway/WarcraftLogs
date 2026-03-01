@@ -32,10 +32,8 @@ async def fetch_new_reports(
             "code": r["code"],
             "zone_id": r["zone"]["id"],
             "zone_name": r["zone"]["name"],
-            "start_time": datetime.fromtimestamp(r["startTime"] / 1000, tz=timezone.utc),
-            "end_time": datetime.fromtimestamp(
-                (r["startTime"] + 3600000) / 1000, tz=timezone.utc
-            ),
+            "start_time": datetime.utcfromtimestamp(r["startTime"] / 1000),
+            "end_time": datetime.utcfromtimestamp((r["startTime"] + 3600000) / 1000),
             "player_names": r.get("players", []),
         })
 

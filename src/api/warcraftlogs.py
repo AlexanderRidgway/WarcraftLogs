@@ -280,13 +280,12 @@ class WarcraftLogsClient:
                     all_players.extend(role_players)
         elif isinstance(player_details, list):
             all_players = player_details
-        return [
-            {
-                "name": p["name"],
-                "gear": p.get("combatantInfo", {}).get("gear", []),
-            }
-            for p in all_players
-        ]
+        result = []
+        for p in all_players:
+            ci = p.get("combatantInfo", {})
+            gear = ci.get("gear", []) if isinstance(ci, dict) else []
+            result.append({"name": p["name"], "gear": gear})
+        return result
 
     async def get_report_rankings(self, report_code: str) -> list:
         """Fetch per-player rankings for all fights in a report.
