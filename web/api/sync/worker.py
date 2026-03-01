@@ -2,6 +2,11 @@ import logging
 import os
 from datetime import datetime, timezone
 
+
+def _utcnow() -> datetime:
+    """Return current UTC time as a timezone-naive datetime (for TIMESTAMP WITHOUT TIME ZONE columns)."""
+    return _utcnow().replace(tzinfo=None)
+
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -53,9 +58,9 @@ class SyncWorker:
                         existing.class_name = p["class_name"]
                         existing.server = p["server"]
                         existing.region = p["region"]
-                        existing.last_synced_at = datetime.now(timezone.utc)
+                        existing.last_synced_at = _utcnow()
                     else:
-                        session.add(Player(**p, last_synced_at=datetime.now(timezone.utc)))
+                        session.add(Player(**p, last_synced_at=_utcnow()))
                 await session.commit()
 
                 await self._update_sync_status(session, "roster", "success")
@@ -176,7 +181,7 @@ class SyncWorker:
     async def _update_sync_status(self, session: AsyncSession, sync_type: str, status: str, error: str = None):
         result = await session.execute(select(SyncStatus).where(SyncStatus.sync_type == sync_type))
         existing = result.scalar_one_or_none()
-        now = datetime.now(timezone.utc)
+        now = _utcnow()
         if existing:
             existing.last_run_at = now
             existing.status = status
