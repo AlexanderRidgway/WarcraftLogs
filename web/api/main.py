@@ -11,6 +11,7 @@ from web.api.routes.auth import router as auth_router
 from web.api.routes.mvp import router as mvp_router
 from web.api.routes.insights import router as insights_router
 from web.api.routes.checklist import router as checklist_router
+from web.api.routes.compare import router as compare_router
 
 app = FastAPI(title="CRANK Guild Dashboard", version="0.1.0")
 
@@ -31,6 +32,7 @@ app.include_router(auth_router)
 app.include_router(mvp_router)
 app.include_router(insights_router)
 app.include_router(checklist_router)
+app.include_router(compare_router)
 
 
 @app.get("/api/health")
