@@ -1,6 +1,7 @@
-import { Link } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { api } from '../api/client'
+import { useAuth } from '../contexts/AuthContext'
+import Sidebar from './Sidebar'
 
 function timeAgo(dateStr: string | null): string {
   if (!dateStr) return 'never'
@@ -17,6 +18,8 @@ function timeAgo(dateStr: string | null): string {
 
 export default function Layout({ children }: { children: React.ReactNode }) {
   const queryClient = useQueryClient()
+  const { isAuthenticated } = useAuth()
+
   const { data: syncStatus } = useQuery({
     queryKey: ['sync-status'],
     queryFn: api.sync.status,
@@ -42,52 +45,44 @@ export default function Layout({ children }: { children: React.ReactNode }) {
   const lastSynced = reportsSync?.last_run_at
 
   return (
-    <div style={{ margin: '0 auto', padding: '1rem 2rem', fontFamily: 'system-ui, sans-serif', color: '#e0e0e0', background: '#0d1117', minHeight: '100vh' }}>
-      <nav style={{ display: 'flex', gap: '1.5rem', marginBottom: '0.5rem', borderBottom: '1px solid #30363d', paddingBottom: '0.75rem', alignItems: 'center' }}>
-        <Link to="/" style={{ color: '#58a6ff', textDecoration: 'none', fontWeight: 'bold', display: 'inline-flex', alignItems: 'center', gap: 6 }}>
-          <img src="/favicon.jpg" alt="CRANK" width={24} height={24} style={{ borderRadius: 3 }} />
-          CRANK
-        </Link>
-        <Link to="/raids" style={{ color: '#58a6ff', textDecoration: 'none' }}>Raids</Link>
-        <Link to="/attendance" style={{ color: '#58a6ff', textDecoration: 'none' }}>Attendance</Link>
-        <Link to="/config" style={{ color: '#58a6ff', textDecoration: 'none' }}>Config</Link>
-        <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: '0.75rem', fontSize: 13 }}>
-          <span style={{ color: '#8b949e' }}>
-            Last synced: {timeAgo(lastSynced ?? null)}
-          </span>
-          <button
-            onClick={() => syncMutation.mutate()}
-            disabled={isSyncing}
-            style={{
-              padding: '4px 12px',
-              background: isSyncing ? '#21262d' : '#238636',
-              color: '#fff',
-              border: 'none',
-              borderRadius: 6,
-              cursor: isSyncing ? 'not-allowed' : 'pointer',
-              fontSize: 13,
-            }}
-          >
-            {isSyncing ? 'Syncing...' : 'Sync Now'}
-          </button>
-          <button
-            onClick={() => { if (confirm('This will re-fetch and re-process all reports. Continue?')) fullResyncMutation.mutate() }}
-            disabled={isSyncing}
-            style={{
-              padding: '4px 12px',
-              background: isSyncing ? '#21262d' : '#da3633',
-              color: '#fff',
-              border: 'none',
-              borderRadius: 6,
-              cursor: isSyncing ? 'not-allowed' : 'pointer',
-              fontSize: 13,
-            }}
-          >
-            Full Resync
-          </button>
+    <div className="min-h-screen bg-bg-base">
+      <Sidebar />
+
+      {/* Main content */}
+      <main className="lg:ml-[240px] min-h-screen">
+        {/* Top bar */}
+        <div className="sticky top-0 z-30 bg-bg-base/80 backdrop-blur-md border-b border-border-default px-6 py-3 flex items-center justify-between">
+          <div />
+          <div className="flex items-center gap-4 text-sm">
+            <span className="text-text-muted">
+              Synced {timeAgo(lastSynced ?? null)}
+            </span>
+            {isAuthenticated && (
+              <>
+                <button
+                  onClick={() => syncMutation.mutate()}
+                  disabled={isSyncing}
+                  className="px-3 py-1.5 bg-success/20 text-success border border-success/30 rounded-lg text-xs font-medium hover:bg-success/30 disabled:opacity-50 transition-colors cursor-pointer disabled:cursor-not-allowed"
+                >
+                  {isSyncing ? 'Syncing...' : 'Sync Now'}
+                </button>
+                <button
+                  onClick={() => { if (confirm('This will re-fetch and re-process all reports. Continue?')) fullResyncMutation.mutate() }}
+                  disabled={isSyncing}
+                  className="px-3 py-1.5 bg-danger/20 text-danger border border-danger/30 rounded-lg text-xs font-medium hover:bg-danger/30 disabled:opacity-50 transition-colors cursor-pointer disabled:cursor-not-allowed"
+                >
+                  Full Resync
+                </button>
+              </>
+            )}
+          </div>
         </div>
-      </nav>
-      {children}
+
+        {/* Page content */}
+        <div className="p-6">
+          {children}
+        </div>
+      </main>
     </div>
   )
 }
