@@ -1,19 +1,32 @@
-function parseColor(percent: number): string {
-  if (percent >= 95) return '#e268a8'
-  if (percent >= 75) return '#a335ee'
-  if (percent >= 50) return '#0070dd'
-  if (percent >= 25) return '#1eff00'
-  return '#999'
+function getParseColor(percent: number): string {
+  if (percent >= 95) return 'bg-parse-legendary'
+  if (percent >= 75) return 'bg-parse-epic'
+  if (percent >= 50) return 'bg-parse-rare'
+  if (percent >= 25) return 'bg-parse-uncommon'
+  return 'bg-parse-common'
+}
+
+function getParseTextColor(percent: number): string {
+  if (percent >= 95) return 'text-parse-legendary'
+  if (percent >= 75) return 'text-parse-epic'
+  if (percent >= 50) return 'text-parse-rare'
+  if (percent >= 25) return 'text-parse-uncommon'
+  return 'text-parse-common'
 }
 
 export default function ParseBar({ percent }: { percent: number }) {
+  const rounded = Math.round(percent * 10) / 10
+
   return (
-    <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-      <div style={{ width: 100, height: 12, background: '#222', borderRadius: 4, overflow: 'hidden' }}>
-        <div style={{ width: `${Math.min(percent, 100)}%`, height: '100%', background: parseColor(percent) }} />
+    <div className="flex items-center gap-2">
+      <div className="w-24 h-2.5 bg-bg-base rounded-full overflow-hidden">
+        <div
+          className={`h-full rounded-full transition-all duration-500 ${getParseColor(percent)}`}
+          style={{ width: `${Math.min(percent, 100)}%` }}
+        />
       </div>
-      <span style={{ color: parseColor(percent), fontWeight: 'bold', fontSize: 14 }}>
-        {percent.toFixed(1)}%
+      <span className={`text-sm font-semibold tabular-nums ${getParseTextColor(percent)}`}>
+        {rounded}
       </span>
     </div>
   )

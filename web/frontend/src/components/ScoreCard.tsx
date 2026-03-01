@@ -1,9 +1,10 @@
 export default function ScoreCard({ label, value }: { label: string; value: number | null }) {
   if (value === null) return null
+
   return (
-    <div style={{ padding: '0.75rem 1.25rem', background: '#161b22', borderRadius: 8, textAlign: 'center', border: '1px solid #30363d' }}>
-      <div style={{ fontSize: 12, color: '#8b949e', marginBottom: 4 }}>{label}</div>
-      <div style={{ fontSize: 24, fontWeight: 'bold', color: '#e0e0e0' }}>{value.toFixed(1)}</div>
+    <div className="flex-1 bg-bg-surface border border-border-default rounded-xl p-4 text-center hover:border-border-hover transition-colors">
+      <div className="text-xs text-text-muted uppercase tracking-wider mb-1">{label}</div>
+      <div className="text-3xl font-bold text-accent-gold tabular-nums">{value.toFixed(1)}</div>
     </div>
   )
 }

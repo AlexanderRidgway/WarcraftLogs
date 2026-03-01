@@ -1,13 +1,13 @@
 const CLASS_COLORS: Record<string, string> = {
-  warrior: '#C79C6E',
-  paladin: '#F58CBA',
-  hunter: '#ABD473',
-  rogue: '#FFF569',
-  priest: '#FFFFFF',
-  shaman: '#0070DE',
-  mage: '#69CCF0',
-  warlock: '#9482C9',
-  druid: '#FF7D0A',
+  warrior: 'text-class-warrior',
+  paladin: 'text-class-paladin',
+  hunter: 'text-class-hunter',
+  rogue: 'text-class-rogue',
+  priest: 'text-class-priest',
+  shaman: 'text-class-shaman',
+  mage: 'text-class-mage',
+  warlock: 'text-class-warlock',
+  druid: 'text-class-druid',
 }
 
 const CLASS_ICONS: Record<string, string> = {
@@ -24,21 +24,21 @@ const CLASS_ICONS: Record<string, string> = {
 
 export default function ClassIcon({ className, name, size = 20 }: { className: string; name: string; size?: number }) {
   const cls = className.toLowerCase()
-  const color = CLASS_COLORS[cls] || '#999'
+  const colorClass = CLASS_COLORS[cls] || 'text-text-secondary'
   const icon = CLASS_ICONS[cls]
 
   return (
-    <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+    <span className="inline-flex items-center gap-1.5">
       {icon && (
         <img
           src={`https://wow.zamimg.com/images/wow/icons/medium/${icon}.jpg`}
           alt={className}
           width={size}
           height={size}
-          style={{ borderRadius: 3, verticalAlign: 'middle' }}
+          className="rounded-sm align-middle"
         />
       )}
-      <span style={{ color, fontWeight: 'bold' }}>{name}</span>
+      <span className={`font-bold ${colorClass}`}>{name}</span>
     </span>
   )
 }
