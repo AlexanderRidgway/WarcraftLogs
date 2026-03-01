@@ -32,3 +32,8 @@ output "elastic_ip" {
   description = "Elastic IP for crankguild.com DNS"
   value       = aws_eip.bot.public_ip
 }
+
+output "web_ecr_repository_url" {
+  description = "ECR repository URL for web Docker images"
+  value       = aws_ecr_repository.web.repository_url
+}
