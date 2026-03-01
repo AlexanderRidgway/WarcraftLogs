@@ -17,6 +17,14 @@ resource "aws_security_group" "bot" {
   name        = "${var.project_name}-sg"
   description = "Security group for WarcraftLogs bot - egress only"
 
+  ingress {
+    description = "Web dashboard"
+    from_port   = 8000
+    to_port     = 8000
+    protocol    = "tcp"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+
   egress {
     from_port   = 0
     to_port     = 0
