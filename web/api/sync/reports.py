@@ -8,6 +8,30 @@ from src.scoring.engine import score_player
 
 logger = logging.getLogger(__name__)
 
+# Valid spec names per WoW class (TBC Classic)
+VALID_SPECS: dict[str, set[str]] = {
+    "warrior": {"protection", "fury", "arms"},
+    "paladin": {"holy", "protection", "retribution"},
+    "rogue": {"combat", "assassination", "subtlety"},
+    "hunter": {"beast mastery", "marksmanship", "survival"},
+    "shaman": {"restoration", "elemental", "enhancement"},
+    "druid": {"feral", "restoration", "balance"},
+    "mage": {"arcane", "fire", "frost"},
+    "warlock": {"affliction", "destruction", "demonology"},
+    "priest": {"holy", "discipline", "shadow"},
+}
+
+
+def _validate_spec_key(cls: str, spec: str) -> str:
+    """Build a spec_key, validating that the spec is valid for the class."""
+    cls_lower = cls.lower()
+    spec_lower = spec.lower()
+    valid = VALID_SPECS.get(cls_lower, set())
+    if spec_lower in valid:
+        return f"{cls_lower}:{spec_lower}"
+    logger.warning("Invalid spec '%s' for class '%s', using class only", spec, cls)
+    return cls_lower
+
 
 async def fetch_new_reports(
     wcl: WarcraftLogsClient,
@@ -72,7 +96,7 @@ async def process_report(
         spec = player.get("spec", "")
         cls = player_classes.get(name, player.get("class", ""))
         parse = player.get("rankPercent", 0)
-        spec_key = f"{cls.lower()}:{spec.lower()}" if cls and spec else None
+        spec_key = _validate_spec_key(cls, spec) if cls else None
         spec_profile = config.get_spec(spec_key) if spec_key else None
 
         rankings.append({
