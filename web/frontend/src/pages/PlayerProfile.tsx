@@ -47,6 +47,12 @@ export default function PlayerProfile() {
     enabled: !!name && tab === 'performance',
   })
 
+  const { data: insights } = useQuery({
+    queryKey: ['insights', name, weeks],
+    queryFn: () => api.players.insights(name!, weeks),
+    enabled: !!name,
+  })
+
   if (isLoading) return <Layout><div className="space-y-4"><SkeletonCard /><SkeletonCard /></div></Layout>
   if (!player) return <Layout><p className="text-text-secondary">Player not found</p></Layout>
 
@@ -82,6 +88,27 @@ export default function PlayerProfile() {
         <ScoreCard label="Consistency" value={avgScore} />
         <ScoreCard label="Avg Parse" value={avgParse} />
       </div>
+
+      {/* Insights */}
+      {insights && insights.length > 0 && (
+        <div className="space-y-2 mb-6">
+          {insights.map((insight, i) => (
+            <div
+              key={i}
+              className={`p-3 rounded-lg border text-sm ${
+                insight.type === 'success'
+                  ? 'bg-success/10 border-success/30 text-success'
+                  : insight.type === 'warning'
+                  ? 'bg-danger/10 border-danger/30 text-danger'
+                  : 'bg-info/10 border-info/30 text-info'
+              }`}
+            >
+              {insight.type === 'success' ? '\u2714' : insight.type === 'warning' ? '\u26A0' : '\u2139'}{' '}
+              {insight.message}
+            </div>
+          ))}
+        </div>
+      )}
 
       {/* Tabs + week selector */}
       <div className="flex items-center justify-between mb-5 border-b border-border-default">

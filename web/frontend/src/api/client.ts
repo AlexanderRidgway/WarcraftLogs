@@ -39,6 +39,7 @@ export const api = {
     gear: (name: string) => fetchJson<import('./types').GearCheck>(`/players/${name}/gear`),
     attendance: (name: string, weeks = 4) => fetchJson<import('./types').AttendanceWeek[]>(`/players/${name}/attendance?weeks=${weeks}`),
     trends: (name: string, weeks = 8) => fetchJson<import('./types').TrendPoint[]>(`/players/${name}/trends?weeks=${weeks}`),
+    insights: (name: string, weeks = 4) => fetchJson<import('./types').InsightEntry[]>(`/players/${name}/insights?weeks=${weeks}`),
   },
   leaderboard: (weeks = 4) => fetchJson<import('./types').LeaderboardEntry[]>(`/leaderboard?weeks=${weeks}`),
   mvp: (weeksAgo = 0) => fetchJson<import('./types').MvpEntry | null>(`/mvp?weeks_ago=${weeksAgo}`),

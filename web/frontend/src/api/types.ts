@@ -142,3 +142,9 @@ export interface MvpEntry {
   fight_count: number
   week_start: string
 }
+
+export interface InsightEntry {
+  type: 'warning' | 'success' | 'info'
+  message: string
+  metric: string | null
+}
