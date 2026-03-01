@@ -1,65 +1,64 @@
-import type {
-  Player, PlayerDetail, Ranking, GearCheck,
-  LeaderboardEntry, ReportSummary, ReportDetail,
-  PlayerAttendance, SyncStatusEntry, AttendanceWeek,
-} from './types'
-
 const BASE = '/api'
+
+function getAuthHeaders(): Record<string, string> {
+  const token = localStorage.getItem('auth_token')
+  return token ? { Authorization: `Bearer ${token}` } : {}
+}
 
 async function fetchJson<T>(path: string): Promise<T> {
   const res = await fetch(`${BASE}${path}`)
-  if (!res.ok) throw new Error(`${res.status} ${res.statusText}`)
+  if (!res.ok) throw new Error(`GET ${path} failed: ${res.status}`)
   return res.json()
 }
 
 async function postJson<T>(path: string, body?: unknown): Promise<T> {
   const res = await fetch(`${BASE}${path}`, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers: { 'Content-Type': 'application/json', ...getAuthHeaders() },
     body: body ? JSON.stringify(body) : undefined,
   })
-  if (!res.ok) throw new Error(`${res.status} ${res.statusText}`)
+  if (!res.ok) throw new Error(`POST ${path} failed: ${res.status}`)
   return res.json()
 }
 
 async function putJson<T>(path: string, body: unknown): Promise<T> {
   const res = await fetch(`${BASE}${path}`, {
     method: 'PUT',
-    headers: { 'Content-Type': 'application/json' },
+    headers: { 'Content-Type': 'application/json', ...getAuthHeaders() },
     body: JSON.stringify(body),
   })
-  if (!res.ok) throw new Error(`${res.status} ${res.statusText}`)
+  if (!res.ok) throw new Error(`PUT ${path} failed: ${res.status}`)
   return res.json()
 }
 
 export const api = {
   players: {
-    list: () => fetchJson<Player[]>('/players'),
-    get: (name: string) => fetchJson<PlayerDetail>(`/players/${encodeURIComponent(name)}`),
-    rankings: (name: string, weeks = 4) => fetchJson<Ranking[]>(`/players/${encodeURIComponent(name)}/rankings?weeks=${weeks}`),
-    gear: (name: string) => fetchJson<GearCheck>(`/players/${encodeURIComponent(name)}/gear`),
-    attendance: (name: string, weeks = 4) => fetchJson<AttendanceWeek[]>(`/players/${encodeURIComponent(name)}/attendance?weeks=${weeks}`),
+    list: () => fetchJson<import('./types').Player[]>('/players'),
+    get: (name: string) => fetchJson<import('./types').PlayerDetail>(`/players/${name}`),
+    rankings: (name: string, weeks = 4) => fetchJson<import('./types').Ranking[]>(`/players/${name}/rankings?weeks=${weeks}`),
+    gear: (name: string) => fetchJson<import('./types').GearCheck>(`/players/${name}/gear`),
+    attendance: (name: string, weeks = 4) => fetchJson<import('./types').AttendanceWeek[]>(`/players/${name}/attendance?weeks=${weeks}`),
   },
-  leaderboard: (weeks = 4) => fetchJson<LeaderboardEntry[]>(`/leaderboard?weeks=${weeks}`),
+  leaderboard: (weeks = 4) => fetchJson<import('./types').LeaderboardEntry[]>(`/leaderboard?weeks=${weeks}`),
   reports: {
-    list: () => fetchJson<ReportSummary[]>('/reports'),
-    get: (code: string) => fetchJson<ReportDetail>(`/reports/${encodeURIComponent(code)}`),
+    list: () => fetchJson<import('./types').ReportSummary[]>('/reports'),
+    get: (code: string) => fetchJson<import('./types').ReportDetail>(`/reports/${code}`),
   },
-  attendance: (weeks = 4) => fetchJson<PlayerAttendance[]>(`/attendance?weeks=${weeks}`),
+  attendance: (weeks = 4) => fetchJson<import('./types').PlayerAttendance[]>(`/attendance?weeks=${weeks}`),
   config: {
     specs: () => fetchJson<Record<string, any>>('/config/specs'),
     consumables: () => fetchJson<any[]>('/config/consumables'),
     attendance: () => fetchJson<any[]>('/config/attendance'),
     gear: () => fetchJson<Record<string, any>>('/config/gear'),
     updateTarget: (specKey: string, metric: string, target: number) =>
-      putJson<any>(`/config/specs/${encodeURIComponent(specKey)}/contributions/${encodeURIComponent(metric)}`, { target }),
+      putJson(`/config/specs/${specKey}/contributions/${metric}`, { target }),
     updateWeights: (specKey: string, weights: { parse_weight: number; utility_weight: number; consumables_weight: number }) =>
-      putJson<any>(`/config/specs/${encodeURIComponent(specKey)}/weights`, weights),
-    updateAttendance: (zoneId: number, requiredPerWeek: number) =>
-      putJson<any>(`/config/attendance/${zoneId}`, { required_per_week: requiredPerWeek }),
+      putJson(`/config/specs/${specKey}/weights`, weights),
+    updateAttendance: (zoneId: number, required: number) =>
+      putJson(`/config/attendance/${zoneId}`, { required_per_week: required }),
   },
   sync: {
-    status: () => fetchJson<SyncStatusEntry[]>('/sync/status'),
-    trigger: (force = false) => postJson<{ status: string; message: string }>(`/sync/trigger?force=${force}`),
+    status: () => fetchJson<import('./types').SyncStatusEntry[]>('/sync/status'),
+    trigger: (force: boolean) => postJson('/sync/trigger?force=' + force),
   },
 }
