@@ -30,13 +30,17 @@ export interface Ranking {
   recorded_at: string
 }
 
+export interface GearGem {
+  id: number
+}
+
 export interface GearItem {
   slot: number
   item_id: number
   item_level: number
   quality: number
   permanent_enchant: number | null
-  gems: number[] | null
+  gems: GearGem[] | null
 }
 
 export interface GearCheck {

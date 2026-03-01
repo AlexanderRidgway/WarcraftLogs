@@ -18,6 +18,14 @@ declare global {
   }
 }
 
+function buildDataWowhead(item: GearItem): string | undefined {
+  const parts: string[] = []
+  if (item.permanent_enchant) parts.push(`ench=${item.permanent_enchant}`)
+  const gemIds = item.gems?.filter(g => g.id > 0).map(g => g.id) || []
+  if (gemIds.length > 0) parts.push(`gems=${gemIds.join(':')}`)
+  return parts.length > 0 ? parts.join('&') : undefined
+}
+
 export default function GearGrid({ gear, issues }: { gear: GearItem[]; issues: { slot: string; problem: string }[] }) {
   const issueMap = new Map(issues.map(i => [i.slot, i.problem]))
 
@@ -33,6 +41,8 @@ export default function GearGrid({ gear, issues }: { gear: GearItem[]; issues: {
       {gear.map(item => {
         const slotName = SLOT_NAMES[item.slot] || `Slot ${item.slot}`
         const issue = issueMap.get(slotName)
+        const activeGems = item.gems?.filter(g => g.id > 0) || []
+        const dataWh = buildDataWowhead(item)
         return (
           <div
             key={item.slot}
@@ -46,12 +56,12 @@ export default function GearGrid({ gear, issues }: { gear: GearItem[]; issues: {
             <div style={{ fontSize: 11, color: '#8b949e' }}>{slotName}</div>
             <div style={{ fontSize: 14 }}>
               <a
-                href={`https://tbc.wowhead.com/item=${item.item_id}${item.permanent_enchant ? `&ench=${item.permanent_enchant}` : ''}`}
+                href={`https://tbc.wowhead.com/item=${item.item_id}`}
                 target="_blank"
                 rel="noopener noreferrer"
-                style={{ color: QUALITY_COLORS[item.quality], textDecoration: 'none' }}
+                {...(dataWh ? { 'data-wowhead': dataWh } : {})}
               >
-                Item #{item.item_id}
+                {slotName}
               </a>
               <span style={{ color: '#8b949e', fontSize: 12, marginLeft: 6 }}>
                 ilvl {item.item_level}
@@ -59,7 +69,22 @@ export default function GearGrid({ gear, issues }: { gear: GearItem[]; issues: {
             </div>
             {item.permanent_enchant && (
               <div style={{ fontSize: 11, color: '#1eff00', marginTop: 2 }}>
-                ✨ Enchanted
+                Enchanted
+              </div>
+            )}
+            {activeGems.length > 0 && (
+              <div style={{ fontSize: 11, marginTop: 2, display: 'flex', flexWrap: 'wrap', gap: '0 6px' }}>
+                {activeGems.map((gem, idx) => (
+                  <a
+                    key={idx}
+                    href={`https://tbc.wowhead.com/item=${gem.id}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    style={{ fontSize: 11 }}
+                  >
+                    [Gem]
+                  </a>
+                ))}
               </div>
             )}
             {issue && <div style={{ fontSize: 11, color: '#ff6b6b', marginTop: 2 }}>{issue}</div>}
