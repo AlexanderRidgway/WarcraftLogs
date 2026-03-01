@@ -28,31 +28,52 @@ jobs:
         id: ecr-login
         uses: aws-actions/amazon-ecr-login@v2
 
-      - name: Build and push Docker image
+      - name: Build and push bot image
         env:
           ECR_REGISTRY: ${{ steps.ecr-login.outputs.registry }}
           ECR_REPOSITORY: warcraftlogs-bot
-          IMAGE_TAG: ${{ github.sha }}
         run: |
-          docker build -t $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG .
-          docker tag $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG $ECR_REGISTRY/$ECR_REPOSITORY:latest
-          docker push $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
+          docker build -t $ECR_REGISTRY/$ECR_REPOSITORY:${{ github.sha }} -t $ECR_REGISTRY/$ECR_REPOSITORY:latest -f Dockerfile .
+          docker push $ECR_REGISTRY/$ECR_REPOSITORY:${{ github.sha }}
           docker push $ECR_REGISTRY/$ECR_REPOSITORY:latest
+
+      - name: Build and push web image
+        env:
+          ECR_REGISTRY: ${{ steps.ecr-login.outputs.registry }}
+          ECR_REPOSITORY: warcraftlogs-bot-web
+        run: |
+          docker build -t $ECR_REGISTRY/$ECR_REPOSITORY:${{ github.sha }} -t $ECR_REGISTRY/$ECR_REPOSITORY:latest -f Dockerfile.web .
+          docker push $ECR_REGISTRY/$ECR_REPOSITORY:${{ github.sha }}
+          docker push $ECR_REGISTRY/$ECR_REPOSITORY:latest
+
+      - name: Upload deploy files to S3
+        run: |
+          aws s3 cp docker-compose.prod.yml s3://${{ secrets.CONFIG_S3_BUCKET }}/deploy/docker-compose.prod.yml
+          aws s3 cp web/nginx.conf s3://${{ secrets.CONFIG_S3_BUCKET }}/deploy/nginx.conf
 
       - name: Deploy to EC2 via SSM
         env:
           ECR_REGISTRY: ${{ steps.ecr-login.outputs.registry }}
-          ECR_REPOSITORY: warcraftlogs-bot
           INSTANCE_ID: ${{ secrets.EC2_INSTANCE_ID }}
         run: |
           aws ssm send-command \
             --instance-ids "$INSTANCE_ID" \
             --document-name "AWS-RunShellScript" \
             --parameters "commands=[
+              'cd /opt/crankguild',
               'aws ecr get-login-password --region ${{ secrets.AWS_REGION }} | docker login --username AWS --password-stdin $ECR_REGISTRY',
-              'docker pull $ECR_REGISTRY/$ECR_REPOSITORY:latest',
-              'docker stop warcraftlogs-bot || true',
-              'docker rm warcraftlogs-bot || true',
-              'docker run -d --name warcraftlogs-bot --restart unless-stopped --log-driver=awslogs --log-opt awslogs-region=${{ secrets.AWS_REGION }} --log-opt awslogs-group=/ecs/warcraftlogs-bot -e AWS_SECRET_NAME=warcraftlogs-bot/credentials -e CONFIG_S3_BUCKET=${{ secrets.CONFIG_S3_BUCKET }} -e AWS_DEFAULT_REGION=${{ secrets.AWS_REGION }} $ECR_REGISTRY/$ECR_REPOSITORY:latest'
+              'aws s3 cp s3://${{ secrets.CONFIG_S3_BUCKET }}/deploy/docker-compose.prod.yml docker-compose.prod.yml',
+              'mkdir -p web',
+              'aws s3 cp s3://${{ secrets.CONFIG_S3_BUCKET }}/deploy/nginx.conf web/nginx.conf',
+              'export ECR_REGISTRY=$ECR_REGISTRY',
+              'export BOT_ECR_REPOSITORY=warcraftlogs-bot',
+              'export WEB_ECR_REPOSITORY=warcraftlogs-bot-web',
+              'export AWS_SECRET_NAME=warcraftlogs-bot/credentials',
+              'export CONFIG_S3_BUCKET=${{ secrets.CONFIG_S3_BUCKET }}',
+              'export AWS_REGION=${{ secrets.AWS_REGION }}',
+              'docker compose -f docker-compose.prod.yml pull',
+              'docker compose -f docker-compose.prod.yml up -d --remove-orphans',
+              'docker stop warcraftlogs-bot 2>/dev/null || true',
+              'docker rm warcraftlogs-bot 2>/dev/null || true'
             ]" \
             --output text
