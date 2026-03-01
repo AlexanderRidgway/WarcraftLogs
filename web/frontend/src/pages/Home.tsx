@@ -1,75 +1,180 @@
-import { useState } from 'react'
+import { useState, useMemo } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { Link } from 'react-router-dom'
 import { api } from '../api/client'
 import Layout from '../components/Layout'
 import ClassIcon from '../components/ClassIcon'
+import ParseBar from '../components/ParseBar'
+import { SkeletonTable } from '../components/Skeleton'
+
+const CLASSES = ['warrior', 'paladin', 'hunter', 'rogue', 'priest', 'shaman', 'mage', 'warlock', 'druid']
+const CLASS_ICONS: Record<string, string> = {
+  warrior: 'classicon_warrior', paladin: 'classicon_paladin', hunter: 'classicon_hunter',
+  rogue: 'classicon_rogue', priest: 'classicon_priest', shaman: 'classicon_shaman',
+  mage: 'classicon_mage', warlock: 'classicon_warlock', druid: 'classicon_druid',
+}
+
+type SortKey = 'rank' | 'avg_score' | 'avg_parse' | 'fight_count'
+
+const MEDAL = ['', '\u{1F947}', '\u{1F948}', '\u{1F949}']
 
 export default function Home() {
   const [search, setSearch] = useState('')
   const [weeks, setWeeks] = useState(4)
+  const [classFilter, setClassFilter] = useState<string | null>(null)
+  const [sortKey, setSortKey] = useState<SortKey>('rank')
+  const [sortAsc, setSortAsc] = useState(true)
+
   const { data: leaderboard, isLoading } = useQuery({
     queryKey: ['leaderboard', weeks],
     queryFn: () => api.leaderboard(weeks),
   })
 
-  const filtered = leaderboard?.filter(p =>
-    p.name.toLowerCase().includes(search.toLowerCase())
+  const filtered = useMemo(() => {
+    let result = leaderboard || []
+    if (search) result = result.filter(p => p.name.toLowerCase().includes(search.toLowerCase()))
+    if (classFilter) result = result.filter(p => p.class_name === classFilter)
+    const sorted = [...result].sort((a, b) => {
+      const av = a[sortKey], bv = b[sortKey]
+      return sortAsc ? (av > bv ? 1 : -1) : (av < bv ? 1 : -1)
+    })
+    return sorted
+  }, [leaderboard, search, classFilter, sortKey, sortAsc])
+
+  const toggleSort = (key: SortKey) => {
+    if (sortKey === key) setSortAsc(!sortAsc)
+    else { setSortKey(key); setSortAsc(key === 'rank') }
+  }
+
+  const SortHeader = ({ label, field }: { label: string; field: SortKey }) => (
+    <th
+      className="p-3 text-left text-xs font-semibold text-text-muted uppercase tracking-wider cursor-pointer hover:text-text-primary transition-colors select-none"
+      onClick={() => toggleSort(field)}
+    >
+      <span className="inline-flex items-center gap-1">
+        {label}
+        {sortKey === field && (
+          <svg className={`w-3 h-3 ${sortAsc ? '' : 'rotate-180'}`} fill="currentColor" viewBox="0 0 20 20">
+            <path d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" />
+          </svg>
+        )}
+      </span>
+    </th>
   )
+
+  const WEEK_OPTIONS = [2, 4, 8]
 
   return (
     <Layout>
-      <h1 style={{ marginBottom: '1rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-        <img src="/favicon.jpg" alt="CRANK" width={32} height={32} style={{ borderRadius: 4 }} />
-        CRANK Guild Dashboard
-      </h1>
-      <div style={{ display: 'flex', gap: '1rem', marginBottom: '1rem' }}>
-        <input
-          type="text"
-          placeholder="Search player..."
-          value={search}
-          onChange={e => setSearch(e.target.value)}
-          style={{ padding: '0.5rem', flex: 1, background: '#161b22', border: '1px solid #30363d', borderRadius: 4, color: '#e0e0e0' }}
-        />
-        <select value={weeks} onChange={e => setWeeks(Number(e.target.value))} style={{ padding: '0.5rem', background: '#161b22', border: '1px solid #30363d', borderRadius: 4, color: '#e0e0e0' }}>
-          <option value={2}>2 weeks</option>
-          <option value={4}>4 weeks</option>
-          <option value={8}>8 weeks</option>
-        </select>
+      {/* Header */}
+      <div className="flex items-center gap-3 mb-6">
+        <img src="/favicon.jpg" alt="CRANK" className="w-9 h-9 rounded" />
+        <h1 className="text-2xl font-bold text-text-primary">Guild Leaderboard</h1>
       </div>
 
-      {isLoading ? (
-        <p>Loading...</p>
-      ) : (
-        <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+      {/* Search + Filters */}
+      <div className="flex flex-col sm:flex-row gap-3 mb-4">
+        <div className="relative flex-1">
+          <svg className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-text-muted" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
+            <path strokeLinecap="round" strokeLinejoin="round" d="m21 21-5.197-5.197m0 0A7.5 7.5 0 1 0 5.196 5.196a7.5 7.5 0 0 0 10.607 10.607Z" />
+          </svg>
+          <input
+            type="text"
+            placeholder="Search players..."
+            value={search}
+            onChange={e => setSearch(e.target.value)}
+            className="w-full pl-10 pr-4 py-2.5 bg-bg-surface/50 border border-border-default rounded-lg text-text-primary placeholder-text-muted focus:outline-none focus:border-accent-gold backdrop-blur-sm transition-colors"
+          />
+        </div>
+        <div className="flex rounded-lg border border-border-default overflow-hidden">
+          {WEEK_OPTIONS.map(w => (
+            <button
+              key={w}
+              onClick={() => setWeeks(w)}
+              className={`px-4 py-2 text-sm font-medium transition-colors cursor-pointer border-none ${
+                weeks === w
+                  ? 'bg-accent-gold text-bg-base'
+                  : 'bg-bg-surface text-text-secondary hover:text-text-primary'
+              }`}
+            >
+              {w}w
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {/* Class filter */}
+      <div className="flex gap-1.5 mb-5 flex-wrap">
+        <button
+          onClick={() => setClassFilter(null)}
+          className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all cursor-pointer border ${
+            classFilter === null
+              ? 'border-accent-gold bg-accent-gold/10 text-accent-gold'
+              : 'border-border-default bg-bg-surface text-text-secondary hover:border-border-hover'
+          }`}
+        >
+          All
+        </button>
+        {CLASSES.map(cls => (
+          <button
+            key={cls}
+            onClick={() => setClassFilter(classFilter === cls ? null : cls)}
+            className={`p-1.5 rounded-lg transition-all cursor-pointer border ${
+              classFilter === cls
+                ? 'border-accent-gold bg-accent-gold/10 ring-1 ring-accent-gold/30'
+                : 'border-border-default bg-bg-surface hover:border-border-hover'
+            }`}
+            title={cls}
+          >
+            <img
+              src={`https://wow.zamimg.com/images/wow/icons/medium/${CLASS_ICONS[cls]}.jpg`}
+              alt={cls}
+              className="w-6 h-6 rounded-sm"
+            />
+          </button>
+        ))}
+      </div>
+
+      {/* Table */}
+      <div className="bg-bg-surface border border-border-default rounded-xl overflow-hidden">
+        <table className="w-full">
           <thead>
-            <tr style={{ borderBottom: '1px solid #30363d', textAlign: 'left' }}>
-              <th style={{ padding: '0.5rem' }}>Rank</th>
-              <th style={{ padding: '0.5rem' }}>Player</th>
-              <th style={{ padding: '0.5rem' }}>Class</th>
-              <th style={{ padding: '0.5rem' }}>Score</th>
-              <th style={{ padding: '0.5rem' }}>Avg Parse</th>
-              <th style={{ padding: '0.5rem' }}>Fights</th>
+            <tr className="border-b border-border-default">
+              <SortHeader label="Rank" field="rank" />
+              <th className="p-3 text-left text-xs font-semibold text-text-muted uppercase tracking-wider">Player</th>
+              <th className="p-3 text-left text-xs font-semibold text-text-muted uppercase tracking-wider hidden sm:table-cell">Class</th>
+              <SortHeader label="Score" field="avg_score" />
+              <SortHeader label="Avg Parse" field="avg_parse" />
+              <SortHeader label="Fights" field="fight_count" />
             </tr>
           </thead>
           <tbody>
-            {filtered?.map(entry => (
-              <tr key={entry.name} style={{ borderBottom: '1px solid #21262d' }}>
-                <td style={{ padding: '0.5rem' }}>{entry.rank}</td>
-                <td style={{ padding: '0.5rem' }}>
-                  <Link to={`/player/${entry.name}`} style={{ textDecoration: 'none' }}>
-                    <ClassIcon className={entry.class_name} name={entry.name} />
-                  </Link>
-                </td>
-                <td style={{ padding: '0.5rem', textTransform: 'capitalize' }}>{entry.class_name}</td>
-                <td style={{ padding: '0.5rem' }}>{entry.avg_score}</td>
-                <td style={{ padding: '0.5rem' }}>{entry.avg_parse}</td>
-                <td style={{ padding: '0.5rem' }}>{entry.fight_count}</td>
-              </tr>
-            ))}
+            {isLoading ? (
+              <SkeletonTable rows={10} cols={6} />
+            ) : (
+              filtered?.map(entry => (
+                <tr
+                  key={entry.name}
+                  className="border-b border-border-default/50 hover:bg-bg-hover transition-colors group cursor-pointer"
+                >
+                  <td className="p-3 text-sm font-medium text-text-secondary">
+                    {entry.rank <= 3 ? MEDAL[entry.rank] : entry.rank}
+                  </td>
+                  <td className="p-3">
+                    <Link to={`/player/${entry.name}`} className="no-underline">
+                      <ClassIcon className={entry.class_name} name={entry.name} />
+                    </Link>
+                  </td>
+                  <td className="p-3 text-sm text-text-secondary capitalize hidden sm:table-cell">{entry.class_name}</td>
+                  <td className="p-3 text-sm font-semibold text-accent-gold tabular-nums">{entry.avg_score}</td>
+                  <td className="p-3"><ParseBar percent={entry.avg_parse} /></td>
+                  <td className="p-3 text-sm text-text-secondary tabular-nums">{entry.fight_count}</td>
+                </tr>
+              ))
+            )}
           </tbody>
         </table>
-      )}
+      </div>
     </Layout>
   )
 }
