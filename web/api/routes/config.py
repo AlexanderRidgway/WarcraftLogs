@@ -1,6 +1,8 @@
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
 from src.config.loader import ConfigLoader
+from web.api.auth import get_current_officer
+from web.api.models import User
 
 router = APIRouter(prefix="/api/config", tags=["config"])
 
@@ -36,7 +38,7 @@ class UpdateTargetRequest(BaseModel):
 
 
 @router.put("/specs/{spec_key}/contributions/{metric}")
-async def update_spec_target(spec_key: str, metric: str, body: UpdateTargetRequest):
+async def update_spec_target(spec_key: str, metric: str, body: UpdateTargetRequest, officer: User = Depends(get_current_officer)):
     try:
         config.update_target(spec_key, metric, body.target)
         return {"status": "ok", "spec_key": spec_key, "metric": metric, "target": body.target}
@@ -51,7 +53,7 @@ class UpdateWeightsRequest(BaseModel):
 
 
 @router.put("/specs/{spec_key}/weights")
-async def update_spec_weights(spec_key: str, body: UpdateWeightsRequest):
+async def update_spec_weights(spec_key: str, body: UpdateWeightsRequest, officer: User = Depends(get_current_officer)):
     profile = config.get_spec(spec_key)
     if profile is None:
         raise HTTPException(status_code=404, detail=f"Spec '{spec_key}' not found")
@@ -70,7 +72,7 @@ class UpdateAttendanceRequest(BaseModel):
 
 
 @router.put("/attendance/{zone_id}")
-async def update_attendance_zone(zone_id: int, body: UpdateAttendanceRequest):
+async def update_attendance_zone(zone_id: int, body: UpdateAttendanceRequest, officer: User = Depends(get_current_officer)):
     try:
         config.update_attendance_zone(zone_id, body.required_per_week)
         return {"status": "ok", "zone_id": zone_id, "required_per_week": body.required_per_week}

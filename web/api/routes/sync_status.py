@@ -7,7 +7,8 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from web.api.database import get_db, async_session
-from web.api.models import SyncStatus
+from web.api.auth import get_current_officer
+from web.api.models import SyncStatus, User
 
 router = APIRouter(prefix="/api/sync", tags=["sync"])
 
@@ -59,7 +60,7 @@ async def _run_sync(force: bool = False):
 
 
 @router.post("/trigger")
-async def trigger_sync(background_tasks: BackgroundTasks, force: bool = False):
+async def trigger_sync(background_tasks: BackgroundTasks, force: bool = False, officer: User = Depends(get_current_officer)):
     if _sync_lock.locked():
         return {"status": "already_running", "message": "Sync is already in progress"}
     background_tasks.add_task(_run_sync, force=force)
