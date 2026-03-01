@@ -39,7 +39,7 @@ def test_hash_and_verify_password():
 
 
 def test_create_access_token():
-    token = create_access_token("admin")
+    token = create_access_token("admin@example.com")
     assert isinstance(token, str)
     assert len(token) > 0
 
@@ -47,7 +47,7 @@ def test_create_access_token():
 @pytest.mark.asyncio
 async def test_login_missing_user(db_transport):
     async with AsyncClient(transport=db_transport, base_url="http://test") as client:
-        response = await client.post("/api/auth/login", json={"username": "nobody", "password": "pass"})
+        response = await client.post("/api/auth/login", json={"email": "nobody@example.com", "password": "pass"})
     assert response.status_code == 401
 
 

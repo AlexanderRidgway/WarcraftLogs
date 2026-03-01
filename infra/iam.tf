@@ -89,6 +89,23 @@ resource "aws_iam_role_policy" "cloudwatch" {
   })
 }
 
+resource "aws_iam_role_policy" "ses_send" {
+  name = "ses-send"
+  role = aws_iam_role.bot.id
+
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [{
+      Effect = "Allow"
+      Action = [
+        "ses:SendEmail",
+        "ses:SendRawEmail",
+      ]
+      Resource = "*"
+    }]
+  })
+}
+
 resource "aws_iam_role_policy_attachment" "ssm" {
   role       = aws_iam_role.bot.name
   policy_arn = "arn:aws:iam::aws:policy/AmazonSSMManagedInstanceCore"

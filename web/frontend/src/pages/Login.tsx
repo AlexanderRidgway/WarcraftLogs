@@ -1,11 +1,11 @@
 import { useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
 import { useAuth } from '../contexts/AuthContext'
 
 export default function Login() {
   const { login } = useAuth()
   const navigate = useNavigate()
-  const [username, setUsername] = useState('')
+  const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
@@ -15,7 +15,7 @@ export default function Login() {
     setError('')
     setLoading(true)
     try {
-      await login(username, password)
+      await login(email, password)
       navigate('/')
     } catch (err: any) {
       setError(err.message || 'Login failed')
@@ -34,11 +34,11 @@ export default function Login() {
         <h2 className="text-lg font-semibold text-text-primary mb-6 text-center">Officer Login</h2>
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
-            <label className="block text-sm text-text-secondary mb-1">Username</label>
+            <label className="block text-sm text-text-secondary mb-1">Email</label>
             <input
-              type="text"
-              value={username}
-              onChange={e => setUsername(e.target.value)}
+              type="email"
+              value={email}
+              onChange={e => setEmail(e.target.value)}
               className="w-full px-3 py-2 bg-bg-base border border-border-default rounded-lg text-text-primary focus:outline-none focus:border-accent-gold transition-colors"
               required
             />
@@ -62,6 +62,11 @@ export default function Login() {
             {loading ? 'Signing in...' : 'Sign In'}
           </button>
         </form>
+        <div className="mt-4 text-center">
+          <Link to="/forgot-password" className="text-sm text-text-muted hover:text-accent-gold no-underline transition-colors">
+            Forgot Password?
+          </Link>
+        </div>
       </div>
     </div>
   )

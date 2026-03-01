@@ -59,7 +59,7 @@ export default function Sidebar() {
               <div className="text-xs text-text-muted mb-2">Signed in as</div>
             )}
             {!collapsed && (
-              <div className="text-sm font-medium text-accent-gold mb-3">{user?.username}</div>
+              <div className="text-sm font-medium text-accent-gold mb-3 truncate">{user?.email}</div>
             )}
             <button
               onClick={logout}

@@ -57,6 +57,12 @@ export const api = {
     updateAttendance: (zoneId: number, required: number) =>
       putJson(`/config/attendance/${zoneId}`, { required_per_week: required }),
   },
+  auth: {
+    forgotPassword: (email: string) =>
+      postJson('/auth/forgot-password', { email }),
+    resetPassword: (token: string, newPassword: string) =>
+      postJson('/auth/reset-password', { token, new_password: newPassword }),
+  },
   sync: {
     status: () => fetchJson<import('./types').SyncStatusEntry[]>('/sync/status'),
     trigger: (force: boolean) => postJson('/sync/trigger?force=' + force),

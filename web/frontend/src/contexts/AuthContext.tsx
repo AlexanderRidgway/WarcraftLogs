@@ -2,7 +2,7 @@ import { createContext, useContext, useState, useEffect, useCallback } from 'rea
 import type { ReactNode } from 'react'
 
 interface AuthUser {
-  username: string
+  email: string
   role: string
 }
 
@@ -10,7 +10,7 @@ interface AuthContextType {
   token: string | null
   user: AuthUser | null
   isAuthenticated: boolean
-  login: (username: string, password: string) => Promise<void>
+  login: (email: string, password: string) => Promise<void>
   logout: () => void
 }
 
@@ -41,11 +41,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     if (token) fetchUser(token)
   }, [token, fetchUser])
 
-  const login = async (username: string, password: string) => {
+  const login = async (email: string, password: string) => {
     const res = await fetch('/api/auth/login', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ username, password }),
+      body: JSON.stringify({ email, password }),
     })
     if (!res.ok) {
       const data = await res.json().catch(() => ({}))

@@ -9,6 +9,8 @@ import RaidDetail from './pages/RaidDetail'
 import Attendance from './pages/Attendance'
 import Config from './pages/Config'
 import Login from './pages/Login'
+import ForgotPassword from './pages/ForgotPassword'
+import ResetPassword from './pages/ResetPassword'
 
 const queryClient = new QueryClient()
 
@@ -20,6 +22,8 @@ export default function App() {
           <BrowserRouter>
             <Routes>
               <Route path="/login" element={<Login />} />
+              <Route path="/forgot-password" element={<ForgotPassword />} />
+              <Route path="/reset-password" element={<ResetPassword />} />
               <Route path="/" element={<Home />} />
               <Route path="/player/:name" element={<PlayerProfile />} />
               <Route path="/raids" element={<RaidHistory />} />
