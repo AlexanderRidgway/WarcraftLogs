@@ -34,7 +34,7 @@ function EditableTarget({ value, onSave }: { value: number; onSave: (v: number) 
   )
 }
 
-function EditableWeights({ specKey, profile, onSave }: { specKey: string; profile: any; onSave: (w: any) => void }) {
+function EditableWeights({ profile, onSave }: { profile: any; onSave: (w: any) => void }) {
   const [editing, setEditing] = useState(false)
   const [parse, setParse] = useState(String((profile.parse_weight * 100).toFixed(0)))
   const [utility, setUtility] = useState(String((profile.utility_weight * 100).toFixed(0)))
@@ -109,7 +109,6 @@ export default function Config() {
           <div key={key} style={{ padding: '0.75rem', background: '#161b22', borderRadius: 8, border: '1px solid #30363d' }}>
             <strong style={{ textTransform: 'capitalize' }}>{key.replace(':', ' — ')}</strong>
             <EditableWeights
-              specKey={key}
               profile={profile}
               onSave={(weights) => updateWeights.mutate({ specKey: key, weights })}
             />
