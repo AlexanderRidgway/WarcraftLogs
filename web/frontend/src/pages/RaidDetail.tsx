@@ -280,18 +280,24 @@ export default function RaidDetail() {
                           <th className="p-2 text-left text-text-muted">Player</th>
                           <th className="p-2 text-left text-text-muted">DPS</th>
                           <th className="p-2 text-left text-text-muted">HPS</th>
+                          <th className="p-2 text-left text-text-muted">Parse %</th>
                           <th className="p-2 text-left text-text-muted">Deaths</th>
                         </tr>
                       </thead>
                       <tbody>
-                        {fightDetail.players.map((p: any) => (
-                          <tr key={p.name} className="border-b border-border-default/50">
-                            <td className="p-2 text-text-primary">{p.name}</td>
-                            <td className="p-2 text-text-secondary tabular-nums">{p.dps.toLocaleString()}</td>
-                            <td className="p-2 text-text-secondary tabular-nums">{p.hps.toLocaleString()}</td>
-                            <td className="p-2">{p.deaths > 0 ? <span className="text-danger">{p.deaths}</span> : <span className="text-success">0</span>}</td>
-                          </tr>
-                        ))}
+                        {fightDetail.players.map((p: any) => {
+                          const bossRankings = report?.boss_rankings?.[fight.encounter_name]
+                          const ranking = bossRankings?.find((r: any) => r.player_name === p.name)
+                          return (
+                            <tr key={p.name} className="border-b border-border-default/50">
+                              <td className="p-2 text-text-primary">{p.name}</td>
+                              <td className="p-2 text-text-secondary tabular-nums">{p.dps.toLocaleString()}</td>
+                              <td className="p-2 text-text-secondary tabular-nums">{p.hps.toLocaleString()}</td>
+                              <td className="p-2">{ranking ? <ParseBar percent={ranking.rank_percent} /> : <span className="text-text-muted">—</span>}</td>
+                              <td className="p-2">{p.deaths > 0 ? <span className="text-danger">{p.deaths}</span> : <span className="text-success">0</span>}</td>
+                            </tr>
+                          )
+                        })}
                       </tbody>
                     </table>
                   </div>

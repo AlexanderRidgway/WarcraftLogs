@@ -4,7 +4,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from datetime import datetime, timedelta
 
 from web.api.database import get_db
-from web.api.models import Player, Score
+from web.api.models import Player, Score, Report
 
 router = APIRouter(prefix="/api/leaderboard", tags=["leaderboard"])
 
@@ -46,4 +46,39 @@ async def leaderboard(
             "fight_count": r.fight_count,
         }
         for i, r in enumerate(rows)
+    ]
+
+
+@router.get("/guild-trends")
+async def guild_trends(
+    weeks: int = Query(default=8, ge=1, le=52),
+    db: AsyncSession = Depends(get_db),
+):
+    """Average guild parse and score per report over time."""
+    cutoff = datetime.utcnow() - timedelta(weeks=weeks)
+
+    result = await db.execute(
+        select(
+            Score.report_code,
+            Report.start_time,
+            func.avg(Score.parse_score).label("avg_parse"),
+            func.avg(Score.overall_score).label("avg_score"),
+            func.count(Score.id).label("player_count"),
+        )
+        .join(Report, Report.code == Score.report_code)
+        .where(Report.start_time >= cutoff)
+        .group_by(Score.report_code, Report.start_time)
+        .order_by(Report.start_time.asc())
+    )
+    rows = result.all()
+
+    return [
+        {
+            "date": r.start_time.isoformat(),
+            "report_code": r.report_code,
+            "avg_parse": round(r.avg_parse, 1),
+            "avg_score": round(r.avg_score, 1),
+            "player_count": r.player_count,
+        }
+        for r in rows
     ]

@@ -174,27 +174,35 @@ export default function PlayerProfile() {
             <thead>
               <tr className="border-b border-border-default">
                 <th className="p-3 text-left text-xs font-semibold text-text-muted uppercase tracking-wider">Date</th>
-                <th className="p-3 text-left text-xs font-semibold text-text-muted uppercase tracking-wider">Spec</th>
+                <th className="p-3 text-left text-xs font-semibold text-text-muted uppercase tracking-wider">Boss</th>
+                <th className="p-3 text-left text-xs font-semibold text-text-muted uppercase tracking-wider hidden sm:table-cell">Spec</th>
                 <th className="p-3 text-left text-xs font-semibold text-text-muted uppercase tracking-wider">Parse</th>
                 <th className="p-3 text-left text-xs font-semibold text-text-muted uppercase tracking-wider hidden sm:table-cell">Report</th>
               </tr>
             </thead>
             <tbody>
               {rankingsLoading ? (
-                <SkeletonTable rows={6} cols={4} />
+                <SkeletonTable rows={6} cols={5} />
               ) : rankingsError ? (
-                <tr><td colSpan={4} className="p-6 text-center text-sm text-danger">Failed to load rankings</td></tr>
+                <tr><td colSpan={5} className="p-6 text-center text-sm text-danger">Failed to load rankings</td></tr>
               ) : rankings && rankings.length > 0 ? (
-                rankings.map((r, i) => (
-                  <tr key={i} className="border-b border-border-default/50 hover:bg-bg-hover transition-colors cursor-pointer" onClick={() => navigate(`/raids/${r.report_code}`)}>
-                    <td className="p-3 text-sm text-text-primary">{r.recorded_at ? new Date(r.recorded_at).toLocaleDateString() : r.encounter_name}</td>
-                    <td className="p-3 text-sm text-text-secondary capitalize">{getSpecLabel(r.spec)}</td>
+                [...rankings]
+                  .sort((a, b) => new Date(b.recorded_at).getTime() - new Date(a.recorded_at).getTime())
+                  .map((r, i) => (
+                  <tr
+                    key={i}
+                    className={`border-b border-border-default/50 hover:bg-bg-hover transition-colors cursor-pointer ${r.encounter_name === 'Average' ? 'italic text-text-muted' : ''}`}
+                    onClick={() => navigate(`/raids/${r.report_code}`)}
+                  >
+                    <td className="p-3 text-sm text-text-primary">{r.recorded_at ? new Date(r.recorded_at).toLocaleDateString() : '—'}</td>
+                    <td className={`p-3 text-sm ${r.encounter_name === 'Average' ? 'text-text-muted italic' : 'text-text-primary'}`}>{r.encounter_name}</td>
+                    <td className="p-3 text-sm text-text-secondary capitalize hidden sm:table-cell">{getSpecLabel(r.spec)}</td>
                     <td className="p-3"><ParseBar percent={r.rank_percent} /></td>
                     <td className="p-3 text-xs text-text-muted font-mono hidden sm:table-cell">{r.report_code}</td>
                   </tr>
                 ))
               ) : (
-                <tr><td colSpan={4} className="p-6 text-center text-sm text-text-muted">No rankings found for this time period</td></tr>
+                <tr><td colSpan={5} className="p-6 text-center text-sm text-text-muted">No rankings found for this time period</td></tr>
               )}
             </tbody>
           </table>

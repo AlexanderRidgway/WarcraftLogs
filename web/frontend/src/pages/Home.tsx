@@ -1,7 +1,9 @@
 import { useState, useMemo } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { Link } from 'react-router-dom'
+import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from 'recharts'
 import { api } from '../api/client'
+import { CHART_COLORS, CHART_DEFAULTS } from '../components/ChartTheme'
 import Layout from '../components/Layout'
 import ClassIcon, { getSpecLabel } from '../components/ClassIcon'
 import ParseBar from '../components/ParseBar'
@@ -58,6 +60,11 @@ export default function Home() {
   const { data: mvp } = useQuery({
     queryKey: ['mvp'],
     queryFn: () => api.mvp(),
+  })
+
+  const { data: guildTrends } = useQuery({
+    queryKey: ['guild-trends', weeks],
+    queryFn: () => api.guildTrends(weeks),
   })
 
   const filtered = useMemo(() => {
@@ -226,6 +233,24 @@ export default function Home() {
           </button>
         ))}
       </div>
+
+      {/* Guild Trend Chart */}
+      {guildTrends && guildTrends.length > 1 && (
+        <div className="bg-bg-surface border border-border-default rounded-xl p-4 mb-5">
+          <h2 className="text-sm font-semibold text-text-primary mb-3">Guild Trends</h2>
+          <ResponsiveContainer width="100%" height={200}>
+            <LineChart data={guildTrends.map(p => ({ ...p, date: new Date(p.date).toLocaleDateString() }))}>
+              <CartesianGrid stroke={CHART_DEFAULTS.gridStroke} strokeDasharray="3 3" />
+              <XAxis dataKey="date" tick={CHART_DEFAULTS.tick} axisLine={CHART_DEFAULTS.axisLine} />
+              <YAxis tick={CHART_DEFAULTS.tick} axisLine={CHART_DEFAULTS.axisLine} domain={[0, 100]} />
+              <Tooltip contentStyle={{ backgroundColor: CHART_COLORS.bg, border: `1px solid ${CHART_COLORS.grid}`, borderRadius: 8 }} />
+              <Legend />
+              <Line type="monotone" dataKey="avg_parse" name="Avg Parse" stroke={CHART_COLORS.info} strokeWidth={2} dot={{ r: 3 }} />
+              <Line type="monotone" dataKey="avg_score" name="Avg Score" stroke={CHART_COLORS.gold} strokeWidth={2} dot={{ r: 3 }} />
+            </LineChart>
+          </ResponsiveContainer>
+        </div>
+      )}
 
       {/* Table */}
       <div className="bg-bg-surface border border-border-default rounded-xl overflow-hidden">

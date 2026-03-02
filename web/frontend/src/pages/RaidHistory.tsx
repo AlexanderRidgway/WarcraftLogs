@@ -29,7 +29,15 @@ export default function RaidHistory() {
                   <div className="text-sm text-text-secondary mt-1">
                     {new Date(r.start_time).toLocaleDateString()}
                   </div>
-                  <div className="flex items-center gap-2 mt-3">
+                  {(r.kill_count != null || r.wipe_count != null) && (
+                    <div className="text-xs text-text-secondary mt-2 flex flex-wrap gap-x-2">
+                      {r.kill_count != null && <span className="text-success">{r.kill_count} kill{r.kill_count !== 1 ? 's' : ''}</span>}
+                      {r.wipe_count != null && r.wipe_count > 0 && <span className="text-danger">{r.wipe_count} wipe{r.wipe_count !== 1 ? 's' : ''}</span>}
+                      {r.death_count != null && r.death_count > 0 && <span className="text-text-muted">{r.death_count} death{r.death_count !== 1 ? 's' : ''}</span>}
+                      {r.avg_parse != null && <span className="text-text-muted">{r.avg_parse} avg parse</span>}
+                    </div>
+                  )}
+                  <div className="flex items-center gap-2 mt-2">
                     <span className="text-xs px-2 py-0.5 bg-bg-hover rounded-full text-text-muted">
                       {r.player_count} players
                     </span>

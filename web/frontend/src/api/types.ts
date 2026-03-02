@@ -69,6 +69,16 @@ export interface ReportSummary {
   start_time: string
   end_time: string
   player_count: number
+  kill_count?: number
+  wipe_count?: number
+  death_count?: number
+  avg_parse?: number | null
+}
+
+export interface BossRankingEntry {
+  player_name: string
+  spec: string
+  rank_percent: number
 }
 
 export interface ReportDetail extends ReportSummary {
@@ -90,6 +100,7 @@ export interface ReportDetail extends ReportSummary {
     target_value: number
     optional: boolean
   }[]
+  boss_rankings?: Record<string, BossRankingEntry[]>
 }
 
 export interface AttendanceReport {
@@ -155,4 +166,12 @@ export interface InsightEntry {
   type: 'warning' | 'success' | 'info'
   message: string
   metric: string | null
+}
+
+export interface GuildTrendPoint {
+  date: string
+  report_code: string
+  avg_parse: number
+  avg_score: number
+  player_count: number
 }

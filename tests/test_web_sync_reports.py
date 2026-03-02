@@ -51,6 +51,20 @@ def mock_wcl():
     return wcl
 
 
+def test_validate_spec_key_alias_normalization():
+    from web.api.sync.reports import _validate_spec_key
+
+    assert _validate_spec_key("Paladin", "Justicar") == "paladin:protection"
+    assert _validate_spec_key("Druid", "Guardian") == "druid:feral"
+    assert _validate_spec_key("Hunter", "BeastMastery") == "hunter:beast mastery"
+    assert _validate_spec_key("Hunter", "beast-mastery") == "hunter:beast mastery"
+    assert _validate_spec_key("Warrior", "Warden") == "warrior:protection"
+    assert _validate_spec_key("Warrior", "Gladiator") == "warrior:protection"
+    # Standard names still work
+    assert _validate_spec_key("Warrior", "Fury") == "warrior:fury"
+    assert _validate_spec_key("Priest", "Shadow") == "priest:shadow"
+
+
 @pytest.mark.asyncio
 async def test_fetch_new_reports(mock_wcl):
     from web.api.sync.reports import fetch_new_reports

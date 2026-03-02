@@ -21,11 +21,22 @@ VALID_SPECS: dict[str, set[str]] = {
     "priest": {"holy", "discipline", "shadow"},
 }
 
+# WCL sometimes returns non-standard spec names; map them to canonical names
+WCL_SPEC_ALIASES: dict[str, str] = {
+    "justicar": "protection",
+    "guardian": "feral",
+    "beastmastery": "beast mastery",
+    "beast-mastery": "beast mastery",
+    "warden": "protection",
+    "gladiator": "protection",
+}
+
 
 def _validate_spec_key(cls: str, spec: str) -> str:
     """Build a spec_key, validating that the spec is valid for the class."""
     cls_lower = cls.lower()
     spec_lower = spec.lower()
+    spec_lower = WCL_SPEC_ALIASES.get(spec_lower, spec_lower)
     valid = VALID_SPECS.get(cls_lower, set())
     if spec_lower in valid:
         return f"{cls_lower}:{spec_lower}"

@@ -3,7 +3,7 @@ from datetime import datetime
 from sqlalchemy import select, func, Integer
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from web.api.models import Player, Score, Ranking, AttendanceRecord, ConsumablesData, GearSnapshot, Death, Fight, Badge
+from web.api.models import Player, Score, Ranking, AttendanceRecord, ConsumablesData, GearSnapshot, Death, Fight, Badge, Report
 
 logger = logging.getLogger(__name__)
 
@@ -29,6 +29,9 @@ async def evaluate_badges(session: AsyncSession):
         await _check_consistency_king(session, player)
         await _check_iron_raider(session, player)
         await _check_utility_star(session, player)
+        await _check_flask_master(session, player)
+        await _check_deathless(session, player)
+        await _check_geared_up(session, player)
 
     # Most improved: find the player with biggest score increase
     await _check_most_improved(session, players)
@@ -155,3 +158,105 @@ async def _check_most_improved(session: AsyncSession, players):
             session, best_player.id, "most_improved",
             f"+{best_improvement:.1f} points improvement"
         )
+
+
+async def _check_flask_master(session: AsyncSession, player):
+    """100% flask uptime for 4+ consecutive raids."""
+    result = await session.execute(
+        select(ConsumablesData.report_code, ConsumablesData.actual_value)
+        .join(Score, (Score.player_id == ConsumablesData.player_id) & (Score.report_code == ConsumablesData.report_code))
+        .where(
+            ConsumablesData.player_id == player.id,
+            ConsumablesData.metric_name == "flask_uptime",
+        )
+        .order_by(Score.recorded_at.desc())
+    )
+    rows = result.all()
+    consecutive = 0
+    for row in rows:
+        if row.actual_value >= 95:
+            consecutive += 1
+            if consecutive >= 4:
+                await _award_badge(session, player.id, "flask_master", f"{consecutive} consecutive raids with flask")
+                break
+        else:
+            break
+
+
+async def _check_deathless(session: AsyncSession, player):
+    """Zero deaths in a full raid clear (all fights are kills)."""
+    # Find reports where this player has scores
+    score_result = await session.execute(
+        select(Score.report_code).where(Score.player_id == player.id)
+    )
+    report_codes = [r.report_code for r in score_result.all()]
+
+    for report_code in report_codes:
+        # Get all fights for this report
+        fights_result = await session.execute(
+            select(Fight).where(Fight.report_code == report_code)
+        )
+        fights = fights_result.scalars().all()
+        if not fights:
+            continue
+        # All fights must be kills for a "full clear"
+        if not all(f.kill for f in fights):
+            continue
+        # Check that the player has zero deaths across all fights
+        fight_ids = [f.id for f in fights]
+        death_count_result = await session.execute(
+            select(func.count(Death.id)).where(
+                Death.fight_db_id.in_(fight_ids),
+                Death.player_id == player.id,
+            )
+        )
+        death_count = death_count_result.scalar()
+        if death_count == 0:
+            # Get zone name from report
+            report_result = await session.execute(
+                select(Report.zone_name).where(Report.code == report_code)
+            )
+            zone_row = report_result.first()
+            zone_name = zone_row.zone_name if zone_row else "Unknown"
+            await _award_badge(session, player.id, "deathless", f"{zone_name} ({report_code})")
+
+
+async def _check_geared_up(session: AsyncSession, player):
+    """All items epic+, fully enchanted and gemmed."""
+    # Enchantable slots (WoW slot IDs)
+    enchant_slots = {0, 1, 2, 4, 5, 6, 7, 8, 9, 14, 15}
+
+    # Get the latest report_code with gear for this player
+    latest_result = await session.execute(
+        select(GearSnapshot.report_code)
+        .where(GearSnapshot.player_id == player.id)
+        .order_by(GearSnapshot.recorded_at.desc())
+        .limit(1)
+    )
+    latest_row = latest_result.first()
+    if not latest_row:
+        return
+
+    report_code = latest_row.report_code
+    gear_result = await session.execute(
+        select(GearSnapshot).where(
+            GearSnapshot.player_id == player.id,
+            GearSnapshot.report_code == report_code,
+        )
+    )
+    items = gear_result.scalars().all()
+    if not items:
+        return
+
+    for item in items:
+        # All items must be epic (quality >= 4)
+        if item.quality < 4:
+            return
+        # Enchantable slots must have enchants
+        if item.slot in enchant_slots and not item.permanent_enchant:
+            return
+        # All gem slots must be filled (non-empty gems list)
+        if item.gems and any(g.get("id", 0) == 0 for g in item.gems):
+            return
+
+    await _award_badge(session, player.id, "geared_up", f"report {report_code}")

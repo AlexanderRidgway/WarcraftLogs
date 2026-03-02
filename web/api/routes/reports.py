@@ -1,9 +1,9 @@
 from fastapi import APIRouter, Depends, HTTPException
-from sqlalchemy import select
+from sqlalchemy import select, func, case
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from web.api.database import get_db
-from web.api.models import Report, Score, ConsumablesData, Player
+from web.api.models import Report, Score, ConsumablesData, Player, Fight, Death, Ranking
 
 router = APIRouter(prefix="/api/reports", tags=["reports"])
 
@@ -12,17 +12,47 @@ router = APIRouter(prefix="/api/reports", tags=["reports"])
 async def list_reports(db: AsyncSession = Depends(get_db)):
     result = await db.execute(select(Report).order_by(Report.start_time.desc()))
     reports = result.scalars().all()
-    return [
-        {
+
+    out = []
+    for r in reports:
+        # Aggregate fight stats
+        fight_result = await db.execute(
+            select(
+                func.sum(case((Fight.kill == True, 1), else_=0)).label("kill_count"),
+                func.sum(case((Fight.kill == False, 1), else_=0)).label("wipe_count"),
+            ).where(Fight.report_code == r.code)
+        )
+        fight_row = fight_result.first()
+
+        # Count deaths
+        death_result = await db.execute(
+            select(func.count(Death.id))
+            .join(Fight, Death.fight_db_id == Fight.id)
+            .where(Fight.report_code == r.code)
+        )
+        death_count = death_result.scalar() or 0
+
+        # Average parse from rankings (exclude "Average" entries for per-boss granularity)
+        parse_result = await db.execute(
+            select(func.avg(Score.parse_score))
+            .where(Score.report_code == r.code)
+        )
+        avg_parse = parse_result.scalar()
+
+        out.append({
             "code": r.code,
             "zone_id": r.zone_id,
             "zone_name": r.zone_name,
             "start_time": r.start_time.isoformat(),
             "end_time": r.end_time.isoformat(),
             "player_count": len(r.player_names) if r.player_names else 0,
-        }
-        for r in reports
-    ]
+            "kill_count": int(fight_row.kill_count or 0) if fight_row else 0,
+            "wipe_count": int(fight_row.wipe_count or 0) if fight_row else 0,
+            "death_count": death_count,
+            "avg_parse": round(avg_parse, 1) if avg_parse else None,
+        })
+
+    return out
 
 
 @router.get("/{code}")
@@ -46,6 +76,23 @@ async def get_report(code: str, db: AsyncSession = Depends(get_db)):
         .where(ConsumablesData.report_code == code)
     )
     consumables = consumables_result.all()
+
+    # Per-boss rankings
+    rankings_result = await db.execute(
+        select(Ranking, Player.name)
+        .join(Player, Ranking.player_id == Player.id)
+        .where(Ranking.report_code == code, Ranking.encounter_name != "Average")
+        .order_by(Ranking.encounter_name, Ranking.rank_percent.desc())
+    )
+    rankings_rows = rankings_result.all()
+
+    boss_rankings: dict[str, list] = {}
+    for r, player_name in rankings_rows:
+        boss_rankings.setdefault(r.encounter_name, []).append({
+            "player_name": player_name,
+            "spec": r.spec,
+            "rank_percent": r.rank_percent,
+        })
 
     return {
         "code": report.code,
@@ -77,4 +124,5 @@ async def get_report(code: str, db: AsyncSession = Depends(get_db)):
             }
             for c, name in consumables
         ],
+        "boss_rankings": boss_rankings,
     }
