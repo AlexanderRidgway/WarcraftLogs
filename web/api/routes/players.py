@@ -182,6 +182,8 @@ async def get_player_attendance(name: str, weeks: int = Query(default=4, ge=1, l
 
     weeks_data = {}
     for r in records:
+        if r.clear_count == 0:
+            continue
         key = (r.year, r.week_number)
         if key not in weeks_data:
             weeks_data[key] = {"year": r.year, "week": r.week_number, "zones": []}
