@@ -79,6 +79,10 @@ async def forgot_password(body: ForgotPasswordRequest, db: AsyncSession = Depend
         send_reset_email(user.email, token)
     except Exception:
         logger.exception("Failed to send password reset email to %s", user.email)
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="Email service is not configured. Contact an admin to reset your password.",
+        )
 
     return {"message": "If that email is registered, a reset link has been sent."}
 

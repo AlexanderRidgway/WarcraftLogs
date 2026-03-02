@@ -17,7 +17,14 @@ async function postJson<T>(path: string, body?: unknown): Promise<T> {
     headers: { 'Content-Type': 'application/json', ...getAuthHeaders() },
     body: body ? JSON.stringify(body) : undefined,
   })
-  if (!res.ok) throw new Error(`POST ${path} failed: ${res.status}`)
+  if (!res.ok) {
+    let detail = ''
+    try {
+      const err = await res.json()
+      detail = err.detail || ''
+    } catch { /* ignore */ }
+    throw new Error(detail || `POST ${path} failed: ${res.status}`)
+  }
   return res.json()
 }
 

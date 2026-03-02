@@ -15,8 +15,9 @@ export default function ForgotPassword() {
     try {
       await api.auth.forgotPassword(email)
       setSubmitted(true)
-    } catch {
-      setError('Something went wrong. Please try again.')
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : ''
+      setError(msg || 'Something went wrong. Please try again.')
     } finally {
       setLoading(false)
     }
