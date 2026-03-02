@@ -21,7 +21,7 @@ async def raidrecap(interaction: discord.Interaction, log_url: str):
         return
 
     try:
-        rankings = await bot.wcl.get_report_rankings(report_code)
+        rankings, _ = await bot.wcl.get_report_rankings(report_code)
     except Exception as e:
         await interaction.followup.send(f"Failed to fetch report data: {e}")
         return

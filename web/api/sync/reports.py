@@ -78,7 +78,7 @@ async def process_report(
                         When provided, overrides the (sometimes incorrect) class from WCL rankings.
     """
     player_classes = player_classes or {}
-    rankings_raw = await wcl.get_report_rankings(report_code)
+    rankings_raw, per_fight_rankings = await wcl.get_report_rankings(report_code)
     players_raw = await wcl.get_report_players(report_code)
     timerange = await wcl.get_report_timerange(report_code)
     gear_raw = await wcl.get_report_gear(report_code)
@@ -111,6 +111,20 @@ async def process_report(
             "spec": spec_key or "unknown",
             "rank_percent": parse,
             "encounter_name": "Average",
+        })
+
+    # Per-boss rankings (for Parse God badge, etc.)
+    for pf in per_fight_rankings:
+        pf_name = pf["name"]
+        if pf_name in player_specs:
+            pf_spec = player_specs[pf_name].lower()
+        else:
+            pf_spec = "unknown"
+        rankings.append({
+            "player_name": pf_name,
+            "spec": pf_spec,
+            "rank_percent": pf["rankPercent"],
+            "encounter_name": pf["encounter_name"],
         })
 
         # Utility data

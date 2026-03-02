@@ -55,7 +55,7 @@ async def weeklyrecap_cmd(interaction: discord.Interaction, weeks_ago: int = 0):
 
     for report in reports:
         try:
-            rankings = await bot.wcl.get_report_rankings(report["code"])
+            rankings, _ = await bot.wcl.get_report_rankings(report["code"])
         except Exception:
             continue
 

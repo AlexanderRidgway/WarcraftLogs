@@ -13,10 +13,16 @@ def mock_wcl():
             "players": ["Testplayer", "Healbot"],
         },
     ]
-    wcl.get_report_rankings.return_value = [
-        {"name": "Testplayer", "class": "Warrior", "spec": "Fury", "rankPercent": 85.5},
-        {"name": "Healbot", "class": "Priest", "spec": "Holy", "rankPercent": 72.0},
-    ]
+    wcl.get_report_rankings.return_value = (
+        [
+            {"name": "Testplayer", "class": "Warrior", "spec": "Fury", "rankPercent": 85.5},
+            {"name": "Healbot", "class": "Priest", "spec": "Holy", "rankPercent": 72.0},
+        ],
+        [
+            {"name": "Testplayer", "encounter_name": "Void Reaver", "rankPercent": 85.5},
+            {"name": "Healbot", "encounter_name": "Void Reaver", "rankPercent": 72.0},
+        ],
+    )
     wcl.get_report_players.return_value = [
         {"id": 1, "name": "Testplayer"},
         {"id": 2, "name": "Healbot"},
@@ -91,7 +97,7 @@ async def test_process_report_returns_player_data(mock_wcl):
     assert "rankings" in result
     assert "scores" in result
     assert "gear" in result
-    assert len(result["rankings"]) == 2
+    assert len(result["rankings"]) == 4  # 2 averages + 2 per-fight
 
 
 @pytest.mark.asyncio

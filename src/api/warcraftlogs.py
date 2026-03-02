@@ -413,40 +413,45 @@ class WarcraftLogsClient:
         # Collect per-fight parses per player, then average
         player_parses: dict[str, list[float]] = {}
         player_info: dict[str, dict] = {}
+        per_fight: list[dict] = []
+
+        def _process_chars(characters, encounter_name):
+            for char in characters:
+                name = char.get("name", "Unknown")
+                rank_pct = char.get("rankPercent") or 0
+                player_parses.setdefault(name, []).append(rank_pct)
+                if name not in player_info:
+                    player_info[name] = {
+                        "class": char.get("class") or "",
+                        "spec": char.get("spec") or "",
+                    }
+                per_fight.append({
+                    "name": name,
+                    "encounter_name": encounter_name,
+                    "rankPercent": rank_pct,
+                })
 
         # DPS rankings: use for dps and tanks roles
         for fight in (dps_data.get("data") or []):
+            enc_name = fight.get("encounter", {}).get("name", "Unknown")
             roles = fight.get("roles", {})
             for role_name, role_data in roles.items():
                 if not isinstance(role_data, dict):
                     continue
                 if role_name == "healers":
                     continue
-                for char in role_data.get("characters", []):
-                    name = char.get("name", "Unknown")
-                    player_parses.setdefault(name, []).append(char.get("rankPercent") or 0)
-                    if name not in player_info:
-                        player_info[name] = {
-                            "class": char.get("class") or "",
-                            "spec": char.get("spec") or "",
-                        }
+                _process_chars(role_data.get("characters", []), enc_name)
 
         # HPS rankings: use for healers role only
         for fight in (hps_data.get("data") or []):
+            enc_name = fight.get("encounter", {}).get("name", "Unknown")
             roles = fight.get("roles", {})
             healers = roles.get("healers")
             if not isinstance(healers, dict):
                 continue
-            for char in healers.get("characters", []):
-                name = char.get("name", "Unknown")
-                player_parses.setdefault(name, []).append(char.get("rankPercent") or 0)
-                if name not in player_info:
-                    player_info[name] = {
-                        "class": char.get("class") or "",
-                        "spec": char.get("spec") or "",
-                    }
+            _process_chars(healers.get("characters", []), enc_name)
 
-        return [
+        averages = [
             {
                 "name": name,
                 "class": player_info[name]["class"],
@@ -455,6 +460,7 @@ class WarcraftLogsClient:
             }
             for name, parses in player_parses.items()
         ]
+        return averages, per_fight
 
     async def get_report_players(self, report_code: str) -> list:
         """Return all player actors in a report as [{id, name}]."""
