@@ -17,6 +17,7 @@ class Player(Base):
     class_name: Mapped[str] = mapped_column(String(20), nullable=False)
     server: Mapped[str] = mapped_column(String(50), nullable=False)
     region: Mapped[str] = mapped_column(String(10), nullable=False)
+    active: Mapped[bool] = mapped_column(Boolean, nullable=False, server_default="true")
     last_synced_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
 
     rankings: Mapped[list["Ranking"]] = relationship(back_populates="player")

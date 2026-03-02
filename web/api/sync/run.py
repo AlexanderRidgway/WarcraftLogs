@@ -20,6 +20,15 @@ async def main():
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
 
+        from sqlalchemy import text, inspect as sa_inspect
+        def _add_missing_columns(connection):
+            inspector = sa_inspect(connection)
+            cols = [c["name"] for c in inspector.get_columns("players")]
+            if "active" not in cols:
+                connection.execute(text("ALTER TABLE players ADD COLUMN active BOOLEAN NOT NULL DEFAULT true"))
+
+        await conn.run_sync(_add_missing_columns)
+
     wcl = WarcraftLogsClient(
         client_id=os.getenv("WARCRAFTLOGS_CLIENT_ID", ""),
         client_secret=os.getenv("WARCRAFTLOGS_CLIENT_SECRET", ""),

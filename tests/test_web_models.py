@@ -14,7 +14,7 @@ def test_models_importable():
 def test_player_table_columns():
     from web.api.models import Player
     columns = {c.name for c in Player.__table__.columns}
-    assert columns == {"id", "name", "class_id", "class_name", "server", "region", "last_synced_at"}
+    assert columns == {"id", "name", "class_id", "class_name", "server", "region", "active", "last_synced_at"}
 
 
 @pytest.fixture
