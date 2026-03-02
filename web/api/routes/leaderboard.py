@@ -10,8 +10,14 @@ router = APIRouter(prefix="/api/leaderboard", tags=["leaderboard"])
 
 
 @router.get("")
-async def leaderboard(weeks: int = Query(default=4, ge=1, le=52), db: AsyncSession = Depends(get_db)):
+async def leaderboard(
+    weeks: int = Query(default=4, ge=1, le=52),
+    sort_by: str = Query(default="parse"),
+    db: AsyncSession = Depends(get_db),
+):
     cutoff = datetime.utcnow() - timedelta(weeks=weeks)
+
+    order_col = func.avg(Score.parse_score) if sort_by == "parse" else func.avg(Score.overall_score)
 
     result = await db.execute(
         select(
@@ -25,7 +31,7 @@ async def leaderboard(weeks: int = Query(default=4, ge=1, le=52), db: AsyncSessi
         .join(Score, Score.player_id == Player.id)
         .where(Score.recorded_at >= cutoff, Player.active == True)
         .group_by(Player.name, Player.class_name)
-        .order_by(func.avg(Score.overall_score).desc())
+        .order_by(order_col.desc())
     )
     rows = result.all()
 

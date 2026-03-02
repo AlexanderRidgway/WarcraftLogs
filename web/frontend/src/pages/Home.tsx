@@ -48,10 +48,11 @@ export default function Home() {
   const [roleFilter, setRoleFilter] = useState<RoleFilter>('all')
   const [sortKey, setSortKey] = useState<SortKey>('rank')
   const [sortAsc, setSortAsc] = useState(true)
+  const [leaderboardTab, setLeaderboardTab] = useState<'parse' | 'score'>('parse')
 
   const { data: leaderboard, isLoading } = useQuery({
-    queryKey: ['leaderboard', weeks],
-    queryFn: () => api.leaderboard(weeks),
+    queryKey: ['leaderboard', weeks, leaderboardTab],
+    queryFn: () => api.leaderboard(weeks, leaderboardTab),
   })
 
   const { data: mvp } = useQuery({
@@ -102,8 +103,32 @@ export default function Home() {
         <h1 className="text-2xl font-bold text-text-primary">Guild Leaderboard</h1>
       </div>
 
+      {/* Leaderboard tabs */}
+      <div className="flex gap-1 mb-5">
+        <button
+          onClick={() => setLeaderboardTab('parse')}
+          className={`px-4 py-2 rounded-lg text-sm font-medium transition-all cursor-pointer border ${
+            leaderboardTab === 'parse'
+              ? 'border-accent-gold bg-accent-gold/10 text-accent-gold'
+              : 'border-border-default bg-bg-surface text-text-secondary hover:border-border-hover'
+          }`}
+        >
+          Parses
+        </button>
+        <button
+          onClick={() => setLeaderboardTab('score')}
+          className={`px-4 py-2 rounded-lg text-sm font-medium transition-all cursor-pointer border ${
+            leaderboardTab === 'score'
+              ? 'border-accent-gold bg-accent-gold/10 text-accent-gold'
+              : 'border-border-default bg-bg-surface text-text-secondary hover:border-border-hover'
+          }`}
+        >
+          Performance Score
+        </button>
+      </div>
+
       {/* MVP of the Week */}
-      {mvp && (
+      {leaderboardTab === 'score' && mvp && (
         <div className="mb-6 p-4 bg-gradient-to-r from-accent-gold/10 to-transparent border border-accent-gold/30 rounded-xl">
           <div className="flex items-center gap-1.5 mb-2">
             <svg className="w-5 h-5 text-accent-gold" fill="currentColor" viewBox="0 0 20 20">
@@ -210,14 +235,14 @@ export default function Home() {
               <SortHeader label="Rank" field="rank" />
               <th className="p-3 text-left text-xs font-semibold text-text-muted uppercase tracking-wider">Player</th>
               <th className="p-3 text-left text-xs font-semibold text-text-muted uppercase tracking-wider hidden sm:table-cell">Spec</th>
-              <SortHeader label="Score" field="avg_score" />
+              {leaderboardTab === 'score' && <SortHeader label="Score" field="avg_score" />}
               <SortHeader label="Avg Parse" field="avg_parse" />
               <SortHeader label="Fights" field="fight_count" />
             </tr>
           </thead>
           <tbody>
             {isLoading ? (
-              <SkeletonTable rows={10} cols={6} />
+              <SkeletonTable rows={10} cols={leaderboardTab === 'score' ? 6 : 5} />
             ) : (
               filtered?.map(entry => (
                 <tr
@@ -233,7 +258,9 @@ export default function Home() {
                     </Link>
                   </td>
                   <td className="p-3 text-sm text-text-secondary capitalize hidden sm:table-cell">{entry.spec ? `${getSpecLabel(entry.spec)} ${entry.class_name}` : entry.class_name}</td>
-                  <td className="p-3 text-sm font-semibold text-accent-gold tabular-nums">{entry.avg_score}</td>
+                  {leaderboardTab === 'score' && (
+                    <td className="p-3 text-sm font-semibold text-accent-gold tabular-nums">{entry.avg_score}</td>
+                  )}
                   <td className="p-3"><ParseBar percent={entry.avg_parse} /></td>
                   <td className="p-3 text-sm text-text-secondary tabular-nums">{entry.fight_count}</td>
                 </tr>

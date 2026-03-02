@@ -45,7 +45,7 @@ export const api = {
     activate: (name: string) => postJson(`/players/${name}/activate`),
   },
   achievements: () => fetchJson<any[]>('/achievements'),
-  leaderboard: (weeks = 4) => fetchJson<import('./types').LeaderboardEntry[]>(`/leaderboard?weeks=${weeks}`),
+  leaderboard: (weeks = 4, sortBy = 'parse') => fetchJson<import('./types').LeaderboardEntry[]>(`/leaderboard?weeks=${weeks}&sort_by=${sortBy}`),
   mvp: (weeksAgo = 0) => fetchJson<import('./types').MvpEntry | null>(`/mvp?weeks_ago=${weeksAgo}`),
   checklist: () => fetchJson<{ players: any[] }>('/checklist'),
   compare: (spec: string, weeks = 4) => fetchJson<any[]>(`/compare?spec=${encodeURIComponent(spec)}&weeks=${weeks}`),
