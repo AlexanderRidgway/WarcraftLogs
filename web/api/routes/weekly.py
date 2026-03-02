@@ -142,10 +142,13 @@ async def weekly_recap(
     config = ConfigLoader()
     gear_config = config.get_gear_check()
 
+    # Use only the latest report's gear snapshot per player to avoid duplicates
+    latest_report_code = report_codes[-1]  # reports are ordered by start_time asc
+
     gear_result = await db.execute(
         select(GearSnapshot, Player.name, Player.class_name)
         .join(Player, GearSnapshot.player_id == Player.id)
-        .where(GearSnapshot.report_code.in_(report_codes))
+        .where(GearSnapshot.report_code == latest_report_code)
         .order_by(Player.name, GearSnapshot.slot)
     )
 
