@@ -393,7 +393,7 @@ class WarcraftLogsClient:
         query($code: String!) {
           reportData {
             report(code: $code) {
-              rankings(playerMetric: dps)
+              rankings(playerMetric: default)
             }
           }
         }
