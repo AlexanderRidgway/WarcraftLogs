@@ -93,12 +93,19 @@ class SyncWorker:
                 existing_codes = set()
             else:
                 async with async_session() as session:
-                    result = await session.execute(select(Report.code))
-                    existing_codes = {r[0] for r in result.all()}
+                    result = await session.execute(
+                        select(Report.code, Report.zone_id, Report.start_time)
+                    )
+                    rows = result.all()
+                    existing_codes = {r[0] for r in rows}
+                    existing_reports = [
+                        {"zone_id": r[1], "start_time": r[2]} for r in rows
+                    ]
 
             new_reports = await fetch_new_reports(
                 self.wcl, self.guild_name, self.server_slug, self.region,
                 days_back=28, existing_codes=existing_codes,
+                existing_reports=existing_reports if not force else None,
             )
 
             for report_data in new_reports:

@@ -115,6 +115,48 @@ async def test_process_report_returns_player_data(mock_wcl):
 
 
 @pytest.mark.asyncio
+async def test_fetch_new_reports_skips_duplicate_zone_time(mock_wcl):
+    from datetime import datetime
+    from web.api.sync.reports import fetch_new_reports
+
+    # Existing report has same zone and start_time within 30 min
+    existing_reports = [
+        {"zone_id": 1007, "start_time": datetime.utcfromtimestamp(1700000000000 / 1000)},
+    ]
+    reports = await fetch_new_reports(
+        wcl=mock_wcl,
+        guild_name="CRANK",
+        server_slug="stormrage",
+        region="us",
+        days_back=7,
+        existing_codes=set(),
+        existing_reports=existing_reports,
+    )
+    assert len(reports) == 0
+
+
+@pytest.mark.asyncio
+async def test_fetch_new_reports_allows_different_zone(mock_wcl):
+    from datetime import datetime
+    from web.api.sync.reports import fetch_new_reports
+
+    # Existing report has different zone_id — should not be considered a duplicate
+    existing_reports = [
+        {"zone_id": 1004, "start_time": datetime.utcfromtimestamp(1700000000000 / 1000)},
+    ]
+    reports = await fetch_new_reports(
+        wcl=mock_wcl,
+        guild_name="CRANK",
+        server_slug="stormrage",
+        region="us",
+        days_back=7,
+        existing_codes=set(),
+        existing_reports=existing_reports,
+    )
+    assert len(reports) == 1
+
+
+@pytest.mark.asyncio
 async def test_process_report_includes_fights_and_deaths(mock_wcl):
     from web.api.sync.reports import process_report
     from src.config.loader import ConfigLoader

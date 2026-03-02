@@ -44,6 +44,22 @@ def _validate_spec_key(cls: str, spec: str) -> str:
     return cls_lower
 
 
+def _is_duplicate_report(
+    zone_id: int,
+    start_time: datetime,
+    existing: list[dict],
+    threshold_minutes: int = 30,
+) -> bool:
+    """Check if a report overlaps with an existing report for the same zone."""
+    for e in existing:
+        if e["zone_id"] != zone_id:
+            continue
+        diff = abs((start_time - e["start_time"]).total_seconds()) / 60
+        if diff < threshold_minutes:
+            return True
+    return False
+
+
 async def fetch_new_reports(
     wcl: WarcraftLogsClient,
     guild_name: str,
@@ -51,28 +67,48 @@ async def fetch_new_reports(
     region: str,
     days_back: int = 7,
     existing_codes: set[str] | None = None,
+    existing_reports: list[dict] | None = None,
 ) -> list[dict]:
-    """Fetch guild reports from WCL, filtering out already-synced ones."""
+    """Fetch guild reports from WCL, filtering out already-synced ones and duplicates.
+
+    Args:
+        existing_reports: List of dicts with zone_id and start_time for overlap detection.
+    """
     existing_codes = existing_codes or set()
+    existing_reports = existing_reports or []
     now_ms = int(time.time() * 1000)
     start_ms = now_ms - (days_back * 86400 * 1000)
 
     raw_reports = await wcl.get_guild_reports(guild_name, server_slug, region, start_ms, now_ms)
 
     new_reports = []
+    # Track all known reports (existing + newly accepted) for overlap detection
+    all_reports = list(existing_reports)
+
     for r in raw_reports:
         if r["code"] in existing_codes:
             continue
-        new_reports.append({
+        start_time = datetime.utcfromtimestamp(r["startTime"] / 1000)
+        zone_id = r["zone"]["id"]
+
+        if _is_duplicate_report(zone_id, start_time, all_reports):
+            logger.info("Skipping duplicate report %s (zone %d, %s)", r["code"], zone_id, start_time)
+            continue
+
+        report = {
             "code": r["code"],
-            "zone_id": r["zone"]["id"],
+            "zone_id": zone_id,
             "zone_name": r["zone"]["name"],
-            "start_time": datetime.utcfromtimestamp(r["startTime"] / 1000),
+            "start_time": start_time,
             "end_time": datetime.utcfromtimestamp((r["startTime"] + 3600000) / 1000),
             "player_names": r.get("players", []),
-        })
+        }
+        new_reports.append(report)
+        all_reports.append(report)
 
-    logger.info("Found %d new reports (of %d total)", len(new_reports), len(raw_reports))
+    logger.info("Found %d new reports (of %d total, %d skipped as duplicates)",
+                len(new_reports), len(raw_reports),
+                len(raw_reports) - len(new_reports) - len(existing_codes))
     return new_reports
 
 
