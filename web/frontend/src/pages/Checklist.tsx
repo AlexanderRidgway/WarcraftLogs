@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { useQuery } from '@tanstack/react-query'
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { Link } from 'react-router-dom'
 import { api } from '../api/client'
 import Layout from '../components/Layout'
@@ -24,6 +24,13 @@ const READINESS_LABEL = { green: 'Ready', yellow: 'Warning', red: 'Not Ready' }
 
 export default function Checklist() {
   const [filter, setFilter] = useState<string | null>(null)
+  const queryClient = useQueryClient()
+  const isOfficer = !!localStorage.getItem('auth_token')
+
+  const deactivateMutation = useMutation({
+    mutationFn: (name: string) => api.players.deactivate(name),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['checklist'] }),
+  })
 
   const { data, isLoading } = useQuery({
     queryKey: ['checklist'],
@@ -94,6 +101,20 @@ export default function Checklist() {
                   )}
                 </div>
               </div>
+              {isOfficer && (
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation()
+                    if (confirm(`Remove ${p.name} from checklist?`)) deactivateMutation.mutate(p.name)
+                  }}
+                  className="ml-2 p-1.5 text-text-muted hover:text-danger transition-colors cursor-pointer bg-transparent border-none flex-shrink-0"
+                  title={`Remove ${p.name}`}
+                >
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                </button>
+              )}
             </div>
           ))
         )}
