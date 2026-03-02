@@ -388,12 +388,16 @@ class WarcraftLogsClient:
 
         Returns one entry per player with their average rankPercent
         across all boss fights: {name, class, spec, rankPercent}.
+
+        Uses two queries via GraphQL aliases — dps metric for DPS/tanks,
+        hps metric for healers — so each role gets the correct parse.
         """
         gql = """
         query($code: String!) {
           reportData {
             report(code: $code) {
-              rankings(playerMetric: default)
+              dpsRankings: rankings(playerMetric: dps)
+              hpsRankings: rankings(playerMetric: hps)
             }
           }
         }
@@ -402,17 +406,21 @@ class WarcraftLogsClient:
         report = result["data"]["reportData"]["report"]
         if report is None:
             return []
-        rankings_data = report.get("rankings", {})
-        if not rankings_data:
-            return []
+
+        dps_data = report.get("dpsRankings", {})
+        hps_data = report.get("hpsRankings", {})
 
         # Collect per-fight parses per player, then average
         player_parses: dict[str, list[float]] = {}
         player_info: dict[str, dict] = {}
-        for fight in rankings_data.get("data", []):
+
+        # DPS rankings: use for dps and tanks roles
+        for fight in (dps_data.get("data") or []):
             roles = fight.get("roles", {})
-            for role_data in roles.values():
+            for role_name, role_data in roles.items():
                 if not isinstance(role_data, dict):
+                    continue
+                if role_name == "healers":
                     continue
                 for char in role_data.get("characters", []):
                     name = char.get("name", "Unknown")
@@ -422,6 +430,21 @@ class WarcraftLogsClient:
                             "class": char.get("class") or "",
                             "spec": char.get("spec") or "",
                         }
+
+        # HPS rankings: use for healers role only
+        for fight in (hps_data.get("data") or []):
+            roles = fight.get("roles", {})
+            healers = roles.get("healers")
+            if not isinstance(healers, dict):
+                continue
+            for char in healers.get("characters", []):
+                name = char.get("name", "Unknown")
+                player_parses.setdefault(name, []).append(char.get("rankPercent") or 0)
+                if name not in player_info:
+                    player_info[name] = {
+                        "class": char.get("class") or "",
+                        "spec": char.get("spec") or "",
+                    }
 
         return [
             {
