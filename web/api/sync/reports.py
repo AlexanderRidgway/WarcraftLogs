@@ -48,7 +48,7 @@ def _is_duplicate_report(
     zone_id: int,
     start_time: datetime,
     existing: list[dict],
-    threshold_minutes: int = 30,
+    threshold_minutes: int = 90,
 ) -> bool:
     """Check if a report overlaps with an existing report for the same zone."""
     for e in existing:

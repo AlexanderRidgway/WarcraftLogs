@@ -60,7 +60,6 @@ class SyncWorker:
                         existing.server = p["server"]
                         existing.region = p["region"]
                         existing.last_synced_at = _utcnow()
-                        existing.active = True
                     else:
                         session.add(Player(**p, last_synced_at=_utcnow()))
                 await session.commit()

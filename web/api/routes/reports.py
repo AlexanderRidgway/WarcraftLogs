@@ -84,10 +84,9 @@ async def get_report(code: str, db: AsyncSession = Depends(get_db)):
 
     consumable_flags = []
     for player_name, metrics in player_consumables.items():
-        flask_uptime = metrics.get("flask_uptime", 0)
-        battle_elixir = metrics.get("battle_elixir_uptime", 0)
-        guardian_elixir = metrics.get("guardian_elixir_uptime", 0)
-        flask_ok = flask_uptime > 50 or (battle_elixir > 50 and guardian_elixir > 50)
+        # flask_or_elixir is a combo_presence metric: 0 = none, 100 = has flask or both elixirs
+        flask_or_elixir = metrics.get("flask_or_elixir", 0)
+        flask_ok = flask_or_elixir > 50
 
         haste = metrics.get("haste_potion_count", 0)
         destro = metrics.get("destruction_potion_count", 0)
