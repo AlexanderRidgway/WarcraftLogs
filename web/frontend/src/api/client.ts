@@ -41,6 +41,8 @@ export const api = {
     trends: (name: string, weeks = 8) => fetchJson<import('./types').TrendPoint[]>(`/players/${name}/trends?weeks=${weeks}`),
     insights: (name: string, weeks = 4) => fetchJson<import('./types').InsightEntry[]>(`/players/${name}/insights?weeks=${weeks}`),
     badges: (name: string) => fetchJson<any[]>(`/players/${name}/badges`),
+    deactivate: (name: string) => postJson(`/players/${name}/deactivate`),
+    activate: (name: string) => postJson(`/players/${name}/activate`),
   },
   achievements: () => fetchJson<any[]>('/achievements'),
   leaderboard: (weeks = 4) => fetchJson<import('./types').LeaderboardEntry[]>(`/leaderboard?weeks=${weeks}`),

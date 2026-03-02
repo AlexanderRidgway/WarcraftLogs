@@ -4,7 +4,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from datetime import datetime, timedelta
 
 from web.api.database import get_db
-from web.api.models import Player, Ranking, Score, GearSnapshot, UtilityData, ConsumablesData, AttendanceRecord, Report
+from web.api.models import Player, Ranking, Score, GearSnapshot, UtilityData, ConsumablesData, AttendanceRecord, Report, User
+from web.api.auth import get_current_officer
 
 router = APIRouter(prefix="/api/players", tags=["players"])
 
@@ -223,3 +224,25 @@ async def get_player_trends(name: str, weeks: int = Query(default=8, ge=1, le=52
         }
         for s in scores
     ]
+
+
+@router.post("/{name}/deactivate")
+async def deactivate_player(name: str, officer: User = Depends(get_current_officer), db: AsyncSession = Depends(get_db)):
+    result = await db.execute(select(Player).where(Player.name == name))
+    player = result.scalar_one_or_none()
+    if not player:
+        raise HTTPException(status_code=404, detail="Player not found")
+    player.active = False
+    await db.commit()
+    return {"status": "ok", "name": name, "active": False}
+
+
+@router.post("/{name}/activate")
+async def activate_player(name: str, officer: User = Depends(get_current_officer), db: AsyncSession = Depends(get_db)):
+    result = await db.execute(select(Player).where(Player.name == name))
+    player = result.scalar_one_or_none()
+    if not player:
+        raise HTTPException(status_code=404, detail="Player not found")
+    player.active = True
+    await db.commit()
+    return {"status": "ok", "name": name, "active": True}
