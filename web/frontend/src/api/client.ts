@@ -58,7 +58,10 @@ export const api = {
     wipes: (code: string) => fetchJson<any[]>(`/reports/${code}/wipes`),
     fights: (code: string) => fetchJson<any[]>(`/reports/${code}/fights`),
     fightDetail: (code: string, fightId: number) => fetchJson<any>(`/reports/${code}/fights/${fightId}`),
+    utility: (code: string) => fetchJson<import('./types').PlayerUtility[]>(`/reports/${code}/utility`),
+    gear: (code: string) => fetchJson<import('./types').ReportGearCheck>(`/reports/${code}/gear`),
   },
+  weekly: (weeksAgo = 0) => fetchJson<import('./types').WeeklyRecap>(`/weekly?weeks_ago=${weeksAgo}`),
   attendance: (weeks = 4) => fetchJson<import('./types').PlayerAttendance[]>(`/attendance?weeks=${weeks}`),
   config: {
     specs: () => fetchJson<Record<string, any>>('/config/specs'),

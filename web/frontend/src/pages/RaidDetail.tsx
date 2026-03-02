@@ -29,6 +29,18 @@ export default function RaidDetail() {
     enabled: !!code,
   })
 
+  const { data: utilityData } = useQuery({
+    queryKey: ['utility', code],
+    queryFn: () => api.reports.utility(code!),
+    enabled: !!code,
+  })
+
+  const { data: gearData } = useQuery({
+    queryKey: ['report-gear', code],
+    queryFn: () => api.reports.gear(code!),
+    enabled: !!code,
+  })
+
   const [expandedFight, setExpandedFight] = useState<number | null>(null)
 
   const { data: fights } = useQuery({
@@ -90,11 +102,30 @@ export default function RaidDetail() {
       </div>
 
       {/* Consumables */}
-      {consumables.length > 0 && (
+      {consumables.length > 0 && (() => {
+        const flags = report.consumable_flags || []
+        const flaggedPlayers = flags.filter(f => !f.passed)
+        const passedCount = flags.filter(f => f.passed).length
+        return (
         <details className="bg-bg-surface border border-border-default rounded-xl overflow-hidden">
           <summary className="p-4 cursor-pointer text-sm font-semibold text-text-primary hover:bg-bg-hover transition-colors select-none">
-            Consumables ({consumables.length})
+            Consumables — <span className="text-success">{passedCount} passed</span>
+            {flaggedPlayers.length > 0 && <>, <span className="text-danger">{flaggedPlayers.length} flagged</span></>}
           </summary>
+          {flaggedPlayers.length > 0 && (
+            <div className="px-4 pb-3 pt-1">
+              <div className="flex flex-wrap gap-2">
+                {flaggedPlayers.map(f => (
+                  <span key={f.player_name} className="inline-flex items-center gap-1 px-2 py-1 rounded text-xs bg-danger/10 border border-danger/20 text-danger">
+                    <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126ZM12 15.75h.007v.008H12v-.008Z" />
+                    </svg>
+                    {f.player_name}: {f.reasons.join(', ')}
+                  </span>
+                ))}
+              </div>
+            </div>
+          )}
           <table className="w-full">
             <thead>
               <tr className="border-b border-border-default">
@@ -118,6 +149,48 @@ export default function RaidDetail() {
               ))}
             </tbody>
           </table>
+        </details>
+        )
+      })()}
+
+      {/* Utility Breakdown */}
+      {utilityData && utilityData.length > 0 && (
+        <details className="bg-bg-surface border border-border-default rounded-xl overflow-hidden mt-6">
+          <summary className="p-4 cursor-pointer text-sm font-semibold text-text-primary hover:bg-bg-hover transition-colors select-none">
+            Utility Breakdown ({utilityData.length} players)
+          </summary>
+          <div className="p-4 pt-0 space-y-4">
+            {utilityData.map((player) => (
+              <div key={player.player_name}>
+                <div className="flex items-center gap-2 mb-2">
+                  <ClassIcon className={player.class_name} name={player.player_name} />
+                </div>
+                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2">
+                  {player.metrics.map((m) => (
+                    <div
+                      key={m.metric_name}
+                      className={`p-2 rounded border text-xs ${
+                        m.score >= 100
+                          ? 'bg-success/10 border-success/20'
+                          : 'bg-danger/10 border-danger/20'
+                      }`}
+                    >
+                      <div className="font-medium text-text-primary mb-1">{m.label}</div>
+                      <div className="tabular-nums">
+                        <span className={m.score >= 100 ? 'text-success' : 'text-danger'}>
+                          {m.actual_value % 1 === 0 ? m.actual_value : m.actual_value.toFixed(1)}
+                        </span>
+                        <span className="text-text-muted"> / {m.target_value}</span>
+                      </div>
+                      <div className={`text-[10px] mt-0.5 ${m.score >= 100 ? 'text-success' : 'text-danger'}`}>
+                        {m.score.toFixed(0)}%
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            ))}
+          </div>
         </details>
       )}
 
@@ -207,6 +280,54 @@ export default function RaidDetail() {
                   </div>
                 </div>
               ))}
+            </div>
+          </details>
+        </div>
+      )}
+
+      {/* Gear Check */}
+      {gearData && gearData.total_players > 0 && (
+        <div className="mt-4">
+          <details className="bg-bg-surface border border-border-default rounded-xl overflow-hidden">
+            <summary className="p-4 cursor-pointer text-sm font-semibold text-text-primary hover:bg-bg-hover transition-colors select-none">
+              Gear Check — <span className="text-success">{gearData.passed} passed</span>
+              {gearData.flagged > 0 && <>, <span className="text-danger">{gearData.flagged} flagged</span></>}
+            </summary>
+            <div className="p-4 pt-0">
+              {gearData.gear_config && (
+                <div className="text-xs text-text-muted mb-3">
+                  Min ilvl: {gearData.gear_config.min_avg_ilvl} | Min quality: {gearData.gear_config.min_quality === 4 ? 'Epic' : gearData.gear_config.min_quality === 3 ? 'Rare' : 'Uncommon'} | Enchants: {gearData.gear_config.check_enchants ? 'Yes' : 'No'} | Gems: {gearData.gear_config.check_gems ? 'Yes' : 'No'}
+                </div>
+              )}
+              {gearData.players.filter(p => p.issue_count > 0 || !p.ilvl_ok).length > 0 ? (
+                <div className="space-y-3">
+                  {gearData.players.filter(p => p.issue_count > 0 || !p.ilvl_ok).map(p => (
+                    <div key={p.name} className="p-3 rounded border border-danger/20 bg-danger/5">
+                      <div className="flex items-center justify-between mb-1">
+                        <ClassIcon className={p.class_name} name={p.name} />
+                        <span className={`text-xs tabular-nums ${p.ilvl_ok ? 'text-text-muted' : 'text-danger'}`}>
+                          ilvl {p.avg_ilvl}
+                        </span>
+                      </div>
+                      <div className="space-y-0.5">
+                        {p.issues.map((issue, j) => (
+                          <div key={j} className="text-xs text-danger">
+                            {issue.slot}: {issue.problem}
+                          </div>
+                        ))}
+                        {!p.ilvl_ok && (
+                          <div className="text-xs text-danger">Average ilvl below minimum ({gearData.gear_config?.min_avg_ilvl})</div>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="text-sm text-success">All players passed gear check</div>
+              )}
+              {gearData.passed > 0 && gearData.flagged > 0 && (
+                <div className="text-xs text-text-muted mt-3">{gearData.passed} player(s) passed all checks</div>
+              )}
             </div>
           </details>
         </div>
