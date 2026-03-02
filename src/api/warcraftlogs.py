@@ -258,6 +258,39 @@ class WarcraftLogsClient:
 
         return result
 
+    async def check_combo_presence(
+        self,
+        report_code: str,
+        source_id: int,
+        start: int,
+        end: int,
+        contrib: dict,
+    ) -> float:
+        """Check if a player has either a Flask OR (Battle Elixir + Guardian Elixir).
+
+        Returns 100.0 if present, 0.0 if not.
+        """
+        buff_data = await self._query_table(report_code, source_id, start, end, "Buffs")
+        auras = buff_data.get("auras", [])
+
+        def _has_any(ids: list[int]) -> bool:
+            return any(
+                (a.get("guid") or a.get("id")) in ids and a.get("totalUptime", 0) > 0
+                for a in auras
+            )
+
+        # Check flasks first
+        if _has_any(contrib.get("flask_ids", [])):
+            return 100.0
+
+        # Check battle + guardian elixir combo
+        has_battle = _has_any(contrib.get("battle_elixir_ids", []))
+        has_guardian = _has_any(contrib.get("guardian_elixir_ids", []))
+        if has_battle and has_guardian:
+            return 100.0
+
+        return 0.0
+
     async def _query_table(
         self, report_code: str, source_id: int, start: int, end: int, data_type: str
     ) -> dict:

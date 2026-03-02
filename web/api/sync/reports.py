@@ -144,11 +144,28 @@ async def process_report(
         player_consumables = []
         if consumables_profile and name in source_map:
             try:
-                c_data = await wcl.get_utility_data(
-                    report_code, source_map[name],
-                    timerange["start"], timerange["end"],
-                    consumables_profile,
-                )
+                # Separate combo_presence from standard consumables
+                standard_consumes = [c for c in consumables_profile if c.get("type") != "combo_presence"]
+                combo_consumes = [c for c in consumables_profile if c.get("type") == "combo_presence"]
+
+                # Fetch standard consumables via get_utility_data
+                c_data = {}
+                if standard_consumes:
+                    c_data = await wcl.get_utility_data(
+                        report_code, source_map[name],
+                        timerange["start"], timerange["end"],
+                        standard_consumes,
+                    )
+
+                # Fetch combo_presence consumables
+                for combo in combo_consumes:
+                    value = await wcl.check_combo_presence(
+                        report_code, source_map[name],
+                        timerange["start"], timerange["end"],
+                        combo,
+                    )
+                    c_data[combo["metric"]] = value
+
                 for cons in consumables_profile:
                     metric = cons["metric"]
                     actual = c_data.get(metric, 0)

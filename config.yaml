@@ -442,25 +442,12 @@ priest:shadow:
 # ──────────────────────────────────────────────
 
 consumables:
-  - metric: flask_uptime
-    label: "Flask"
-    spell_ids: [17628, 17627, 28518, 28520, 28521]
-    type: uptime
-    subtype: buff
-    target: 100
-
-  - metric: battle_elixir_uptime
-    label: "Battle Elixir"
-    spell_ids: [28490, 28491, 28493, 28494, 28497, 17538, 17539, 28543]
-    type: uptime
-    subtype: buff
-    target: 100
-
-  - metric: guardian_elixir_uptime
-    label: "Guardian Elixir"
-    spell_ids: [39625, 39627, 39628, 28502, 28503]
-    type: uptime
-    subtype: buff
+  - metric: flask_or_elixir
+    label: "Flask / Elixirs"
+    type: combo_presence
+    flask_ids: [17628, 17627, 28518, 28520, 28521]
+    battle_elixir_ids: [28490, 28491, 28493, 28494, 28497, 17538, 17539, 28543]
+    guardian_elixir_ids: [39625, 39627, 39628, 28502, 28503]
     target: 100
 
   - metric: haste_potion_count
