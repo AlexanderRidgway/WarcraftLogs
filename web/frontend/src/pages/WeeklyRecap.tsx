@@ -133,34 +133,6 @@ export default function WeeklyRecap() {
             </div>
           )}
 
-          {/* Attendance */}
-          <div className="bg-bg-surface border border-border-default rounded-xl overflow-hidden">
-            <div className="p-4 border-b border-border-default">
-              <h2 className="text-sm font-semibold text-text-primary">Attendance</h2>
-            </div>
-            <div className="p-4">
-              {data.attendance.length === 0 ? (
-                <div className="flex items-center gap-2 text-sm text-success">
-                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M9 12.75 11.25 15 15 9.75M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" />
-                  </svg>
-                  All players met attendance requirements
-                </div>
-              ) : (
-                <div className="space-y-2">
-                  {data.attendance.map((a, i) => (
-                    <div key={i} className="flex items-center justify-between p-2 rounded bg-danger/5 border border-danger/10">
-                      <span className="text-sm text-text-primary">{a.player_name}</span>
-                      <span className="text-xs text-danger">
-                        {a.zone_label}: {a.clear_count}/{a.required}
-                      </span>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
-          </div>
-
           {/* Gear Issues */}
           <div className="bg-bg-surface border border-border-default rounded-xl overflow-hidden">
             <div className="p-4 border-b border-border-default">
