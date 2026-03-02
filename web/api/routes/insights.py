@@ -4,7 +4,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from datetime import datetime, timedelta
 
 from web.api.database import get_db
-from web.api.models import Player, Score, Ranking, UtilityData, ConsumablesData, AttendanceRecord
+from web.api.models import Player, Score, Ranking, UtilityData, ConsumablesData
 
 router = APIRouter(prefix="/api/players", tags=["insights"])
 
@@ -118,31 +118,6 @@ async def get_player_insights(name: str, weeks: int = Query(default=4, ge=1, le=
                 "type": "success",
                 "message": f"{row.label} usage consistently at target",
                 "metric": row.label,
-            })
-
-    # 5. Attendance
-    attendance_result = await db.execute(
-        select(AttendanceRecord)
-        .where(AttendanceRecord.player_id == player.id)
-        .order_by(AttendanceRecord.year.desc(), AttendanceRecord.week_number.desc())
-        .limit(20)
-    )
-    att_records = attendance_result.scalars().all()
-    if att_records:
-        met_count = sum(1 for a in att_records if a.met)
-        total_count = len(att_records)
-        pct = (met_count / total_count) * 100 if total_count > 0 else 0
-        if pct == 100:
-            insights.append({
-                "type": "success",
-                "message": "Perfect attendance across all tracked raids",
-                "metric": "attendance",
-            })
-        elif pct < 75:
-            insights.append({
-                "type": "warning",
-                "message": f"Attendance at {pct:.0f}% — below 75% threshold",
-                "metric": "attendance",
             })
 
     if not insights:
