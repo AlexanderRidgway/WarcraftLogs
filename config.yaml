@@ -445,7 +445,7 @@ consumables:
   - metric: flask_or_elixir
     label: "Flask / Elixirs"
     type: combo_presence
-    flask_ids: [17628, 17627, 28518, 28520, 28521]
+    flask_ids: [17628, 17627, 28518, 28520, 28521, 28540, 33053]
     battle_elixir_ids: [28490, 28491, 28493, 28494, 28497, 17538, 17539, 28543]
     guardian_elixir_ids: [39625, 39627, 39628, 28502, 28503]
     target: 100
