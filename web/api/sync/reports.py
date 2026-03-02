@@ -113,20 +113,6 @@ async def process_report(
             "encounter_name": "Average",
         })
 
-    # Per-boss rankings (for Parse God badge, etc.)
-    for pf in per_fight_rankings:
-        pf_name = pf["name"]
-        if pf_name in player_specs:
-            pf_spec = player_specs[pf_name].lower()
-        else:
-            pf_spec = "unknown"
-        rankings.append({
-            "player_name": pf_name,
-            "spec": pf_spec,
-            "rank_percent": pf["rankPercent"],
-            "encounter_name": pf["encounter_name"],
-        })
-
         # Utility data
         utility_data = {}
         if spec_profile and spec_profile.get("contributions") and name in source_map:
@@ -218,6 +204,20 @@ async def process_report(
             "parse_score": parse,
             "utility_score": None,
             "consumables_score": None,
+        })
+
+    # Per-boss rankings (for Parse God badge, etc.)
+    for pf in per_fight_rankings:
+        pf_name = pf["name"]
+        if pf_name in player_specs:
+            pf_spec = player_specs[pf_name].lower()
+        else:
+            pf_spec = "unknown"
+        rankings.append({
+            "player_name": pf_name,
+            "spec": pf_spec,
+            "rank_percent": pf["rankPercent"],
+            "encounter_name": pf["encounter_name"],
         })
 
     gear = []
