@@ -98,7 +98,7 @@ class SyncWorker:
 
             new_reports = await fetch_new_reports(
                 self.wcl, self.guild_name, self.server_slug, self.region,
-                days_back=7, existing_codes=existing_codes,
+                days_back=28, existing_codes=existing_codes,
             )
 
             for report_data in new_reports:
