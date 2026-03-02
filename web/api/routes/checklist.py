@@ -11,7 +11,7 @@ router = APIRouter(prefix="/api/checklist", tags=["checklist"])
 
 @router.get("")
 async def get_checklist(db: AsyncSession = Depends(get_db)):
-    players_result = await db.execute(select(Player).order_by(Player.name))
+    players_result = await db.execute(select(Player).where(Player.active == True).order_by(Player.name))
     players = players_result.scalars().all()
 
     result = []

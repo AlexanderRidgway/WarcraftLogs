@@ -13,6 +13,7 @@ async def guild_attendance(weeks: int = Query(default=4, ge=1, le=52), db: Async
     result = await db.execute(
         select(Player.name, Player.class_name, AttendanceRecord)
         .join(AttendanceRecord, AttendanceRecord.player_id == Player.id)
+        .where(Player.active == True)
         .order_by(Player.name, AttendanceRecord.year.desc(), AttendanceRecord.week_number.desc())
     )
     rows = result.all()

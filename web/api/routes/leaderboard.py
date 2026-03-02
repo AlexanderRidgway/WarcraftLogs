@@ -23,7 +23,7 @@ async def leaderboard(weeks: int = Query(default=4, ge=1, le=52), db: AsyncSessi
             func.max(Score.spec).label("spec"),
         )
         .join(Score, Score.player_id == Player.id)
-        .where(Score.recorded_at >= cutoff)
+        .where(Score.recorded_at >= cutoff, Player.active == True)
         .group_by(Player.name, Player.class_name)
         .order_by(func.avg(Score.overall_score).desc())
     )
