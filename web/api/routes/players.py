@@ -12,7 +12,7 @@ router = APIRouter(prefix="/api/players", tags=["players"])
 
 @router.get("")
 async def list_players(db: AsyncSession = Depends(get_db)):
-    result = await db.execute(select(Player).order_by(Player.name))
+    result = await db.execute(select(Player).where(Player.active == True).order_by(Player.name))
     players = result.scalars().all()
     return [
         {

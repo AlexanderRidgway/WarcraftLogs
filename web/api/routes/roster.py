@@ -21,7 +21,7 @@ async def roster_health(weeks: int = Query(default=4, ge=1, le=52), db: AsyncSes
             func.count(func.distinct(Player.id)).label("count"),
         )
         .join(Player, Player.id == Score.player_id)
-        .where(Score.recorded_at >= cutoff)
+        .where(Score.recorded_at >= cutoff, Player.active == True)
         .group_by(Score.spec, Player.class_name)
     )
     distribution = [
@@ -34,7 +34,7 @@ async def roster_health(weeks: int = Query(default=4, ge=1, le=52), db: AsyncSes
 
     # At-risk players: declining score trend
     at_risk = []
-    players_result = await db.execute(select(Player))
+    players_result = await db.execute(select(Player).where(Player.active == True))
     for player in players_result.scalars().all():
         scores_result = await db.execute(
             select(Score)
@@ -58,6 +58,7 @@ async def roster_health(weeks: int = Query(default=4, ge=1, le=52), db: AsyncSes
     att_result = await db.execute(
         select(AttendanceRecord)
         .join(Player, Player.id == AttendanceRecord.player_id)
+        .where(Player.active == True)
         .order_by(Player.name, AttendanceRecord.year.desc(), AttendanceRecord.week_number.desc())
     )
     records = att_result.scalars().all()
