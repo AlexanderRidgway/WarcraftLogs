@@ -175,9 +175,9 @@ export default function PlayerProfile() {
               <tr className="border-b border-border-default">
                 <th className="p-3 text-left text-xs font-semibold text-text-muted uppercase tracking-wider">Date</th>
                 <th className="p-3 text-left text-xs font-semibold text-text-muted uppercase tracking-wider">Boss</th>
+                <th className="p-3 text-left text-xs font-semibold text-text-muted uppercase tracking-wider hidden sm:table-cell">Raid</th>
                 <th className="p-3 text-left text-xs font-semibold text-text-muted uppercase tracking-wider hidden sm:table-cell">Spec</th>
                 <th className="p-3 text-left text-xs font-semibold text-text-muted uppercase tracking-wider">Parse</th>
-                <th className="p-3 text-left text-xs font-semibold text-text-muted uppercase tracking-wider hidden sm:table-cell">Report</th>
               </tr>
             </thead>
             <tbody>
@@ -196,9 +196,12 @@ export default function PlayerProfile() {
                   >
                     <td className="p-3 text-sm text-text-primary">{r.recorded_at ? new Date(r.recorded_at).toLocaleDateString() : '—'}</td>
                     <td className={`p-3 text-sm ${r.encounter_name === 'Average' ? 'text-text-muted italic' : 'text-text-primary'}`}>{r.encounter_name}</td>
+                    <td className="p-3 text-sm text-text-secondary hidden sm:table-cell">
+                      {r.zone_name || '—'}
+                      {r.player_count ? <span className="text-text-muted ml-1 text-xs">({r.player_count})</span> : null}
+                    </td>
                     <td className="p-3 text-sm text-text-secondary capitalize hidden sm:table-cell">{getSpecLabel(r.spec)}</td>
                     <td className="p-3"><ParseBar percent={r.rank_percent} /></td>
-                    <td className="p-3 text-xs text-text-muted font-mono hidden sm:table-cell">{r.report_code}</td>
                   </tr>
                 ))
               ) : (

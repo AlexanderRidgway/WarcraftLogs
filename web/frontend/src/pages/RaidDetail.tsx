@@ -155,9 +155,10 @@ export default function RaidDetail() {
                     <div className="space-y-0.5">
                       {fight.deaths.map((d: any, j: number) => (
                         <div key={j} className="text-xs text-text-secondary flex gap-2">
-                          <span className="text-text-muted w-10">{d.timestamp_pct}%</span>
+                          <span className="text-text-muted w-10 tabular-nums">{d.time || `${d.timestamp_pct}%`}</span>
                           <span>{d.player}</span>
-                          <span className="text-text-muted">— {d.ability}</span>
+                          {d.ability && <span className="text-text-muted">— {d.ability}</span>}
+                          {d.damage_taken != null && d.damage_taken > 0 && <span className="text-danger text-text-muted">({d.damage_taken.toLocaleString()} dmg)</span>}
                         </div>
                       ))}
                     </div>

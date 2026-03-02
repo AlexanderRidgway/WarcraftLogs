@@ -284,10 +284,15 @@ async def process_report(
                     continue
                 killing_ability = None
                 damage_taken = None
-                if d.get("damage", {}).get("entries"):
-                    last_hit = d["damage"]["entries"][-1]
+                damage_info = d.get("damage") or {}
+                entries = damage_info.get("entries") or []
+                if entries:
+                    last_hit = entries[-1]
                     killing_ability = last_hit.get("ability", {}).get("name")
                     damage_taken = last_hit.get("amount")
+                if not killing_ability:
+                    # Fallback: use total damage if available
+                    damage_taken = damage_taken or damage_info.get("total")
                 # deathTime is relative to report start; convert to fight-relative
                 death_time = d.get("deathTime", 0) - f.get("startTime", 0)
                 deaths.append({

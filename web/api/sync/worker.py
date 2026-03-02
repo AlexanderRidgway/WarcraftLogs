@@ -162,6 +162,7 @@ class SyncWorker:
                         rank_percent=r["rank_percent"],
                         zone_id=report_data["zone_id"],
                         report_code=report_data["code"],
+                        recorded_at=report_data["start_time"],
                     ))
 
             for s in processed["scores"]:
@@ -174,6 +175,7 @@ class SyncWorker:
                         parse_score=s["parse_score"],
                         utility_score=s.get("utility_score"),
                         consumables_score=s.get("consumables_score"),
+                        recorded_at=report_data["start_time"],
                     ))
 
             for g in processed["gear"]:

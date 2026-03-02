@@ -69,11 +69,12 @@ async def get_player_rankings(name: str, weeks: int = Query(default=4, ge=1, le=
 
     cutoff = datetime.utcnow() - timedelta(weeks=weeks)
     rankings_result = await db.execute(
-        select(Ranking)
+        select(Ranking, Report.zone_name, Report.player_names)
+        .join(Report, Report.code == Ranking.report_code, isouter=True)
         .where(Ranking.player_id == player.id, Ranking.recorded_at >= cutoff)
         .order_by(Ranking.recorded_at.desc())
     )
-    rankings = rankings_result.scalars().all()
+    rankings = rankings_result.all()
 
     return [
         {
@@ -83,8 +84,10 @@ async def get_player_rankings(name: str, weeks: int = Query(default=4, ge=1, le=
             "zone_id": r.zone_id,
             "report_code": r.report_code,
             "recorded_at": r.recorded_at.isoformat() if r.recorded_at else None,
+            "zone_name": zone_name,
+            "player_count": len(player_names) if player_names else 0,
         }
-        for r in rankings
+        for r, zone_name, player_names in rankings
     ]
 
 

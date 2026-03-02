@@ -28,6 +28,8 @@ export interface Ranking {
   zone_id: number
   report_code: string
   recorded_at: string
+  zone_name?: string
+  player_count?: number
 }
 
 export interface GearGem {

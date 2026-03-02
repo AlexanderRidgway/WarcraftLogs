@@ -34,11 +34,16 @@ async def get_report_deaths(code: str, db: AsyncSession = Depends(get_db)):
         fight_deaths = []
         for death, player_name, class_name in deaths_result.all():
             timestamp_pct = round((death.timestamp_ms / fight.duration_ms) * 100, 1) if fight.duration_ms > 0 else 0
+            # Format time as M:SS into the fight
+            total_secs = death.timestamp_ms // 1000
+            time_str = f"{total_secs // 60}:{total_secs % 60:02d}"
             fight_deaths.append({
                 "player": player_name,
                 "class_name": class_name,
                 "timestamp_pct": timestamp_pct,
-                "ability": death.killing_ability or "Unknown",
+                "time": time_str,
+                "ability": death.killing_ability or None,
+                "damage_taken": death.damage_taken,
             })
             if player_name not in death_totals:
                 death_totals[player_name] = {"player": player_name, "class_name": class_name, "death_count": 0}
