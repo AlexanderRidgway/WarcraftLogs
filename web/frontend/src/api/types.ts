@@ -103,6 +103,46 @@ export interface ReportDetail extends ReportSummary {
     optional: boolean
   }[]
   boss_rankings?: Record<string, BossRankingEntry[]>
+  consumable_flags?: ConsumableFlag[]
+}
+
+export interface UtilityMetric {
+  metric_name: string
+  label: string
+  actual_value: number
+  target_value: number
+  score: number
+}
+
+export interface PlayerUtility {
+  player_name: string
+  class_name: string
+  metrics: UtilityMetric[]
+}
+
+export interface ReportGearPlayer {
+  name: string
+  class_name: string
+  avg_ilvl: number
+  ilvl_ok: boolean
+  issues: { slot: string; problem: string }[]
+  issue_count: number
+}
+
+export interface ReportGearCheck {
+  total_players: number
+  passed: number
+  flagged: number
+  gear_config: Record<string, any>
+  players: ReportGearPlayer[]
+}
+
+export interface ConsumableFlag {
+  player_name: string
+  flask_ok: boolean
+  potion_ok: boolean
+  passed: boolean
+  reasons: string[]
 }
 
 export interface AttendanceReport {
@@ -176,4 +216,45 @@ export interface GuildTrendPoint {
   avg_parse: number
   avg_score: number
   player_count: number
+}
+
+export interface WeeklyTopPerformer {
+  name: string
+  class_name: string
+  avg_score: number
+  avg_parse: number
+  fight_count: number
+}
+
+export interface WeeklyZoneSummary {
+  zone_name: string
+  run_count: number
+  unique_players: number
+  top_players: { name: string; class_name: string; avg_score: number }[]
+}
+
+export interface WeeklyAttendanceMiss {
+  player_name: string
+  zone_label: string
+  clear_count: number
+  required: number
+}
+
+export interface WeeklyGearIssue {
+  name: string
+  class_name: string
+  avg_ilvl: number
+  ilvl_ok: boolean
+  issue_count: number
+  issues: { slot: string; problem: string }[]
+}
+
+export interface WeeklyRecap {
+  week_start: string
+  week_end: string
+  report_count: number
+  top_performers: WeeklyTopPerformer[]
+  zone_summaries: WeeklyZoneSummary[]
+  attendance: WeeklyAttendanceMiss[]
+  gear_issues: WeeklyGearIssue[]
 }

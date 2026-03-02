@@ -3,7 +3,7 @@ from sqlalchemy import select, func, case
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from web.api.database import get_db
-from web.api.models import Report, Score, ConsumablesData, Player, Fight, Death, Ranking
+from web.api.models import Report, Score, ConsumablesData, Player, Fight, Death, Ranking, UtilityData, GearSnapshot
 
 router = APIRouter(prefix="/api/reports", tags=["reports"])
 
@@ -77,6 +77,37 @@ async def get_report(code: str, db: AsyncSession = Depends(get_db)):
     )
     consumables = consumables_result.all()
 
+    # Build consumable flags (flask/elixir + potion pass/fail per player)
+    player_consumables: dict[str, dict[str, float]] = {}
+    for c, name in consumables:
+        player_consumables.setdefault(name, {})[c.metric_name] = c.actual_value
+
+    consumable_flags = []
+    for player_name, metrics in player_consumables.items():
+        flask_uptime = metrics.get("flask_uptime", 0)
+        battle_elixir = metrics.get("battle_elixir_uptime", 0)
+        guardian_elixir = metrics.get("guardian_elixir_uptime", 0)
+        flask_ok = flask_uptime > 50 or (battle_elixir > 50 and guardian_elixir > 50)
+
+        haste = metrics.get("haste_potion_count", 0)
+        destro = metrics.get("destruction_potion_count", 0)
+        mana = metrics.get("mana_potion_count", 0)
+        potion_ok = (haste + destro + mana) >= 1
+
+        reasons = []
+        if not flask_ok:
+            reasons.append("No flask/elixirs")
+        if not potion_ok:
+            reasons.append("No potions")
+
+        consumable_flags.append({
+            "player_name": player_name,
+            "flask_ok": flask_ok,
+            "potion_ok": potion_ok,
+            "passed": flask_ok and potion_ok,
+            "reasons": reasons,
+        })
+
     # Per-boss rankings
     rankings_result = await db.execute(
         select(Ranking, Player.name)
@@ -125,4 +156,94 @@ async def get_report(code: str, db: AsyncSession = Depends(get_db)):
             for c, name in consumables
         ],
         "boss_rankings": boss_rankings,
+        "consumable_flags": consumable_flags,
+    }
+
+
+@router.get("/{code}/utility")
+async def get_report_utility(code: str, db: AsyncSession = Depends(get_db)):
+    result = await db.execute(select(Report).where(Report.code == code))
+    if not result.scalar_one_or_none():
+        raise HTTPException(status_code=404, detail="Report not found")
+
+    rows = await db.execute(
+        select(UtilityData, Player.name, Player.class_name)
+        .join(Player, UtilityData.player_id == Player.id)
+        .where(UtilityData.report_code == code)
+        .order_by(Player.name, UtilityData.metric_name)
+    )
+
+    players: dict[str, dict] = {}
+    for u, player_name, class_name in rows.all():
+        if player_name not in players:
+            players[player_name] = {
+                "player_name": player_name,
+                "class_name": class_name,
+                "metrics": [],
+            }
+        players[player_name]["metrics"].append({
+            "metric_name": u.metric_name,
+            "label": u.label,
+            "actual_value": u.actual_value,
+            "target_value": u.target_value,
+            "score": u.score,
+        })
+
+    return list(players.values())
+
+
+@router.get("/{code}/gear")
+async def get_report_gear(code: str, db: AsyncSession = Depends(get_db)):
+    result = await db.execute(select(Report).where(Report.code == code))
+    if not result.scalar_one_or_none():
+        raise HTTPException(status_code=404, detail="Report not found")
+
+    rows = await db.execute(
+        select(GearSnapshot, Player.name, Player.class_name)
+        .join(Player, GearSnapshot.player_id == Player.id)
+        .where(GearSnapshot.report_code == code)
+        .order_by(Player.name, GearSnapshot.slot)
+    )
+
+    from src.gear.checker import check_player_gear
+    from src.config.loader import ConfigLoader
+
+    config = ConfigLoader()
+    gear_config = config.get_gear_check()
+
+    # Group gear items by player
+    player_gear: dict[str, dict] = {}
+    for g, player_name, class_name in rows.all():
+        if player_name not in player_gear:
+            player_gear[player_name] = {"class_name": class_name, "items": []}
+        player_gear[player_name]["items"].append({
+            "slot": g.slot,
+            "id": g.item_id,
+            "itemLevel": g.item_level,
+            "quality": g.quality,
+            "permanentEnchant": g.permanent_enchant,
+            "gems": g.gems or [],
+        })
+
+    players = []
+    for player_name, data in player_gear.items():
+        result = check_player_gear(data["items"], gear_config)
+        players.append({
+            "name": player_name,
+            "class_name": data["class_name"],
+            "avg_ilvl": result["avg_ilvl"],
+            "ilvl_ok": result["ilvl_ok"],
+            "issues": result["issues"],
+            "issue_count": len(result["issues"]),
+        })
+
+    players.sort(key=lambda p: p["issue_count"], reverse=True)
+    flagged = sum(1 for p in players if p["issue_count"] > 0 or not p["ilvl_ok"])
+
+    return {
+        "total_players": len(players),
+        "passed": len(players) - flagged,
+        "flagged": flagged,
+        "gear_config": gear_config,
+        "players": players,
     }
