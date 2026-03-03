@@ -275,6 +275,30 @@ class WarcraftLogsClient:
 
         return result
 
+    async def get_raid_casts_by_source(
+        self,
+        report_code: str,
+        start: int,
+        end: int,
+        contrib: dict,
+    ) -> dict[int, int]:
+        """Query Casts table for a spell across ALL players (no sourceID).
+
+        Returns: {source_id: cast_count} for all players who cast the spell.
+        WCL Casts table entries have a 'sources' array when queried without sourceID.
+        """
+        cast_data = await self._query_table(report_code, None, start, end, "Casts")
+        entries = cast_data.get("entries", [])
+
+        result: dict[int, int] = {}
+        for entry in entries:
+            if not self._contrib_matches(entry, contrib):
+                continue
+            for source in entry.get("sources", []):
+                sid = source["id"]
+                result[sid] = result.get(sid, 0) + source["total"]
+        return result
+
     async def check_combo_presence(
         self,
         report_code: str,

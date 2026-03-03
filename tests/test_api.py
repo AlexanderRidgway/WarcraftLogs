@@ -628,3 +628,117 @@ async def test_pull_check_returns_0_when_not_cast():
     client.query = AsyncMock(return_value=mock_response)
     result = await client.get_utility_data("abc", source_id=1, start=0, end=300000, contributions=contributions)
     assert result["md_pull"] == 0.0
+
+
+@pytest.mark.asyncio
+async def test_get_raid_casts_by_source():
+    """get_raid_casts_by_source queries Casts without sourceID and groups by source."""
+    client = WarcraftLogsClient(client_id="id", client_secret="secret")
+    client._token = "mock_token"
+    client._token_expiry = float("inf")
+
+    mock_response = {
+        "data": {
+            "reportData": {
+                "report": {
+                    "table": {
+                        "data": {
+                            "entries": [
+                                {"name": "Dispel Magic", "guid": 527, "id": 527, "total": 15,
+                                 "sources": [
+                                     {"name": "PriestA", "id": 1, "total": 10},
+                                     {"name": "PriestB", "id": 2, "total": 5},
+                                 ]},
+                            ]
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    contrib = {"spell_id": 527, "metric": "dispel_magic_count"}
+
+    client.query = AsyncMock(return_value=mock_response)
+    result = await client.get_raid_casts_by_source("abc", 0, 300000, contrib)
+
+    assert result == {1: 10, 2: 5}
+    # Verify sourceID was None (no per-player filter)
+    call_args = client.query.call_args
+    assert call_args[0][1]["sourceID"] is None
+
+
+@pytest.mark.asyncio
+async def test_get_raid_casts_by_source_spell_ids_list():
+    """get_raid_casts_by_source works with spell_ids list and sums matching entries."""
+    client = WarcraftLogsClient(client_id="id", client_secret="secret")
+    client._token = "mock_token"
+    client._token_expiry = float("inf")
+
+    mock_response = {
+        "data": {
+            "reportData": {
+                "report": {
+                    "table": {
+                        "data": {
+                            "entries": [
+                                {"name": "Curse of Elements", "guid": 27228, "id": 27228, "total": 8,
+                                 "sources": [
+                                     {"name": "WarlockA", "id": 3, "total": 5},
+                                     {"name": "WarlockB", "id": 4, "total": 3},
+                                 ]},
+                                {"name": "Curse of Recklessness", "guid": 27226, "id": 27226, "total": 4,
+                                 "sources": [
+                                     {"name": "WarlockA", "id": 3, "total": 4},
+                                 ]},
+                                {"name": "Shadow Bolt", "guid": 99999, "id": 99999, "total": 200,
+                                 "sources": [
+                                     {"name": "WarlockA", "id": 3, "total": 200},
+                                 ]},
+                            ]
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    contrib = {"spell_ids": [27228, 27218, 30910, 27226, 11719, 30909], "metric": "curse_count"}
+
+    client.query = AsyncMock(return_value=mock_response)
+    result = await client.get_raid_casts_by_source("abc", 0, 300000, contrib)
+
+    # WarlockA: 5 (elements) + 4 (recklessness) = 9
+    # WarlockB: 3 (elements)
+    # Shadow Bolt is NOT matched (not in spell_ids)
+    assert result == {3: 9, 4: 3}
+
+
+@pytest.mark.asyncio
+async def test_get_raid_casts_by_source_no_matches():
+    """Returns empty dict when no casts match the spell."""
+    client = WarcraftLogsClient(client_id="id", client_secret="secret")
+    client._token = "mock_token"
+    client._token_expiry = float("inf")
+
+    mock_response = {
+        "data": {
+            "reportData": {
+                "report": {
+                    "table": {
+                        "data": {
+                            "entries": [
+                                {"name": "Shadow Bolt", "guid": 99999, "id": 99999, "total": 200,
+                                 "sources": [{"name": "WarlockA", "id": 3, "total": 200}]},
+                            ]
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    contrib = {"spell_id": 527, "metric": "dispel_magic_count"}
+    client.query = AsyncMock(return_value=mock_response)
+    result = await client.get_raid_casts_by_source("abc", 0, 300000, contrib)
+    assert result == {}
