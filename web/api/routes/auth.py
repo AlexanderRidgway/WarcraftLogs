@@ -72,7 +72,7 @@ async def forgot_password(body: ForgotPasswordRequest, db: AsyncSession = Depend
 
     token = generate_reset_token()
     user.reset_token = token
-    user.reset_token_expires = datetime.now(timezone.utc) + timedelta(hours=RESET_TOKEN_EXPIRE_HOURS)
+    user.reset_token_expires = datetime.now(timezone.utc).replace(tzinfo=None) + timedelta(hours=RESET_TOKEN_EXPIRE_HOURS)
     await db.commit()
 
     try:
@@ -97,7 +97,7 @@ async def reset_password(body: ResetPasswordRequest, db: AsyncSession = Depends(
     if user is None:
         raise HTTPException(status_code=400, detail="Invalid or expired reset link")
 
-    if user.reset_token_expires is None or user.reset_token_expires < datetime.now(timezone.utc):
+    if user.reset_token_expires is None or user.reset_token_expires < datetime.now(timezone.utc).replace(tzinfo=None):
         user.reset_token = None
         user.reset_token_expires = None
         await db.commit()
