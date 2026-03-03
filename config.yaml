@@ -139,7 +139,7 @@ rogue:combat:
   contributions:
     - metric: expose_armor_uptime
       label: "Expose Armor"
-      spell_id: 8647
+      spell_ids: [8647, 8649, 8650, 11197, 11198, 26866]
       type: uptime
       target: 85
 
