@@ -48,9 +48,15 @@ def _is_duplicate_report(
     zone_id: int,
     start_time: datetime,
     existing: list[dict],
-    threshold_minutes: int = 90,
+    threshold_minutes: int = 5,
 ) -> bool:
-    """Check if a report overlaps with an existing report for the same zone."""
+    """Check if a report overlaps with an existing report for the same zone.
+
+    Uses a tight 5-minute window: true duplicate uploads (same raid logged by
+    multiple guild members) have nearly identical start times, while genuinely
+    different raids (e.g. Gruul's Lair then Magtheridon's Lair) are always
+    more than 5 minutes apart.
+    """
     for e in existing:
         if e["zone_id"] != zone_id:
             continue

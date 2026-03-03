@@ -119,7 +119,7 @@ async def test_fetch_new_reports_skips_duplicate_zone_time(mock_wcl):
     from datetime import datetime
     from web.api.sync.reports import fetch_new_reports
 
-    # Existing report has same zone and start_time within 90 min
+    # Existing report has same zone and start_time within 5 min (duplicate upload)
     existing_reports = [
         {"zone_id": 1007, "start_time": datetime.utcfromtimestamp(1700000000000 / 1000)},
     ]
