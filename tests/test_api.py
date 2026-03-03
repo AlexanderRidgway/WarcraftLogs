@@ -742,3 +742,106 @@ async def test_get_raid_casts_by_source_no_matches():
     client.query = AsyncMock(return_value=mock_response)
     result = await client.get_raid_casts_by_source("abc", 0, 300000, contrib)
     assert result == {}
+
+
+@pytest.mark.asyncio
+async def test_get_raid_buff_uptime_debuff():
+    """get_raid_buff_uptime queries Debuffs with hostilityType=Enemies for enemy debuffs."""
+    client = WarcraftLogsClient(client_id="id", client_secret="secret")
+    client._token = "mock_token"
+    client._token_expiry = float("inf")
+
+    mock_response = {
+        "data": {
+            "reportData": {
+                "report": {
+                    "table": {
+                        "data": {
+                            "auras": [
+                                {"name": "Faerie Fire", "guid": 770, "totalUptime": 85000},
+                                {"name": "Faerie Fire (Feral)", "guid": 16857, "totalUptime": 10000},
+                            ],
+                            "totalTime": 100000,
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    contrib = {"spell_ids": [770, 16857], "metric": "faerie_fire_uptime", "type": "shared_responsibility", "target": 85}
+
+    client.query = AsyncMock(return_value=mock_response)
+    result = await client.get_raid_buff_uptime("abc", 0, 100000, contrib)
+
+    # Best matching aura uptime: 85000/100000 = 85%
+    assert result == pytest.approx(85.0, abs=0.1)
+    # Verify hostilityType=Enemies was used (no subtype=buff)
+    call_args = client.query.call_args
+    assert call_args[0][1]["hostilityType"] == "Enemies"
+
+
+@pytest.mark.asyncio
+async def test_get_raid_buff_uptime_buff():
+    """get_raid_buff_uptime queries Buffs table for subtype=buff."""
+    client = WarcraftLogsClient(client_id="id", client_secret="secret")
+    client._token = "mock_token"
+    client._token_expiry = float("inf")
+
+    mock_response = {
+        "data": {
+            "reportData": {
+                "report": {
+                    "table": {
+                        "data": {
+                            "auras": [
+                                {"name": "Power Word: Fortitude", "guid": 25392, "totalUptime": 90000},
+                            ],
+                            "totalTime": 100000,
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    contrib = {"spell_id": 25392, "metric": "fortitude_uptime", "type": "shared_responsibility",
+               "subtype": "buff", "target": 95}
+
+    client.query = AsyncMock(return_value=mock_response)
+    result = await client.get_raid_buff_uptime("abc", 0, 100000, contrib)
+
+    assert result == pytest.approx(90.0, abs=0.1)
+    # Verify Buffs table used (no hostilityType)
+    call_args = client.query.call_args
+    assert "hostilityType" not in call_args[0][1]
+
+
+@pytest.mark.asyncio
+async def test_get_raid_buff_uptime_no_aura():
+    """Returns 0.0 when aura not found."""
+    client = WarcraftLogsClient(client_id="id", client_secret="secret")
+    client._token = "mock_token"
+    client._token_expiry = float("inf")
+
+    mock_response = {
+        "data": {
+            "reportData": {
+                "report": {
+                    "table": {
+                        "data": {
+                            "auras": [],
+                            "totalTime": 100000,
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    contrib = {"spell_id": 25392, "metric": "fortitude_uptime", "type": "shared_responsibility",
+               "subtype": "buff", "target": 95}
+
+    client.query = AsyncMock(return_value=mock_response)
+    result = await client.get_raid_buff_uptime("abc", 0, 100000, contrib)
+    assert result == 0.0

@@ -299,6 +299,36 @@ class WarcraftLogsClient:
                 result[sid] = result.get(sid, 0) + source["total"]
         return result
 
+    async def get_raid_buff_uptime(
+        self,
+        report_code: str,
+        start: int,
+        end: int,
+        contrib: dict,
+    ) -> float:
+        """Query Buffs or Debuffs table with no sourceID to get raid-wide uptime %.
+
+        For subtype=buff: queries Buffs table (no hostilityType).
+        Otherwise: queries Debuffs table with hostilityType=Enemies.
+        Returns the best-matching aura's uptime as a percentage (0-100).
+        """
+        if contrib.get("subtype") == "buff":
+            data = await self._query_table(report_code, None, start, end, "Buffs")
+        else:
+            data = await self._query_table(
+                report_code, None, start, end, "Debuffs",
+                hostility_type="Enemies",
+            )
+
+        auras = data.get("auras", [])
+        total_time = data.get("totalTime", 1)
+
+        matches = [a for a in auras if self._contrib_matches(a, contrib)]
+        if not matches:
+            return 0.0
+        best = max(m["totalUptime"] for m in matches)
+        return (best / total_time) * 100
+
     async def check_combo_presence(
         self,
         report_code: str,
