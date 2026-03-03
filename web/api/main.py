@@ -49,8 +49,21 @@ async def health():
 
 
 import os
+from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 
 static_dir = os.path.join(os.path.dirname(__file__), "..", "frontend", "dist")
 if os.path.isdir(static_dir):
-    app.mount("/", StaticFiles(directory=static_dir, html=True), name="frontend")
+    # Mount /assets for Vite-built JS/CSS bundles (correct MIME types)
+    assets_dir = os.path.join(static_dir, "assets")
+    if os.path.isdir(assets_dir):
+        app.mount("/assets", StaticFiles(directory=assets_dir), name="assets")
+
+    # Catch-all: serve static file if it exists, otherwise index.html (SPA routing)
+    @app.get("/{full_path:path}")
+    async def serve_spa(full_path: str):
+        if full_path:
+            file_path = os.path.join(static_dir, full_path)
+            if os.path.isfile(file_path):
+                return FileResponse(file_path)
+        return FileResponse(os.path.join(static_dir, "index.html"), media_type="text/html")
