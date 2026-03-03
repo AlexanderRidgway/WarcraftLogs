@@ -136,6 +136,19 @@ async def process_report(
     source_map = {p["name"]: p["id"] for p in players_raw}
     consumables_profile = config.get_consumables()
 
+    # Fetch fights early so we can use per-fight windows for utility
+    try:
+        fights_raw = await wcl.get_report_fights(report_code)
+    except Exception:
+        logger.warning("Failed to fetch fights for %s", report_code)
+        fights_raw = []
+
+    boss_fight_windows = []
+    for f in fights_raw:
+        if f.get("encounterID", 0) == 0:
+            continue
+        boss_fight_windows.append((f.get("startTime", 0), f.get("endTime", 0)))
+
     rankings = []
     scores = []
     utility_entries = []
@@ -160,17 +173,51 @@ async def process_report(
             "encounter_name": "Average",
         })
 
-        # Utility data
+        # Utility data — uptime metrics per boss fight (averaged), counts over full report
         utility_data = {}
         if spec_profile and spec_profile.get("contributions") and name in source_map:
-            try:
-                utility_data = await wcl.get_utility_data(
-                    report_code, source_map[name],
-                    timerange["start"], timerange["end"],
-                    spec_profile["contributions"],
-                )
-            except Exception:
-                logger.warning("Failed to fetch utility for %s in %s", name, report_code)
+            contribs = spec_profile["contributions"]
+            uptime_contribs = [c for c in contribs if c["type"] == "uptime"]
+            count_contribs = [c for c in contribs if c["type"] == "count"]
+
+            # Uptime metrics: calculate per boss fight and average
+            if uptime_contribs and boss_fight_windows:
+                per_metric_totals: dict[str, float] = {}
+                per_metric_counts: dict[str, int] = {}
+                for f_start, f_end in boss_fight_windows:
+                    try:
+                        fight_data = await wcl.get_utility_data(
+                            report_code, source_map[name],
+                            f_start, f_end, uptime_contribs,
+                        )
+                        for metric, value in fight_data.items():
+                            per_metric_totals[metric] = per_metric_totals.get(metric, 0) + value
+                            per_metric_counts[metric] = per_metric_counts.get(metric, 0) + 1
+                    except Exception:
+                        pass
+                for metric in per_metric_totals:
+                    if per_metric_counts.get(metric, 0) > 0:
+                        utility_data[metric] = per_metric_totals[metric] / per_metric_counts[metric]
+            elif uptime_contribs:
+                # No boss fights found — fall back to full report
+                try:
+                    utility_data = await wcl.get_utility_data(
+                        report_code, source_map[name],
+                        timerange["start"], timerange["end"], uptime_contribs,
+                    )
+                except Exception:
+                    logger.warning("Failed to fetch utility for %s in %s", name, report_code)
+
+            # Count metrics: use full report timerange (counts accumulate over whole raid)
+            if count_contribs:
+                try:
+                    count_data = await wcl.get_utility_data(
+                        report_code, source_map[name],
+                        timerange["start"], timerange["end"], count_contribs,
+                    )
+                    utility_data.update(count_data)
+                except Exception:
+                    logger.warning("Failed to fetch count utility for %s in %s", name, report_code)
 
             for contrib in spec_profile.get("contributions", []):
                 metric = contrib["metric"]
@@ -283,16 +330,10 @@ async def process_report(
                 "gems": item.get("gems", []),
             })
 
-    # Fetch fights, deaths, and per-fight stats
+    # Process fights for deaths and per-fight stats (fights_raw fetched above)
     fights = []
     deaths = []
     fight_stats = []
-
-    try:
-        fights_raw = await wcl.get_report_fights(report_code)
-    except Exception:
-        logger.warning("Failed to fetch fights for %s", report_code)
-        fights_raw = []
 
     for f in fights_raw:
         if f.get("encounterID", 0) == 0:
