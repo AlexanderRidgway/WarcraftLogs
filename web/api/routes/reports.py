@@ -2,6 +2,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy import select, func, case
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from src.config.loader import ConfigLoader
 from web.api.database import get_db
 from web.api.models import Report, Score, ConsumablesData, Player, Fight, Death, Ranking, UtilityData, GearSnapshot
 
@@ -10,6 +11,7 @@ router = APIRouter(prefix="/api/reports", tags=["reports"])
 
 @router.get("")
 async def list_reports(db: AsyncSession = Depends(get_db)):
+    excluded = ConfigLoader().get_excluded_zones()
     result = await db.execute(select(Report).order_by(Report.start_time.desc()))
     reports = result.scalars().all()
 
@@ -50,6 +52,7 @@ async def list_reports(db: AsyncSession = Depends(get_db)):
             "wipe_count": int(fight_row.wipe_count or 0) if fight_row else 0,
             "death_count": death_count,
             "avg_parse": round(avg_parse, 1) if avg_parse else None,
+            "informational": r.zone_id in excluded if excluded else False,
         })
 
     return out
@@ -57,6 +60,7 @@ async def list_reports(db: AsyncSession = Depends(get_db)):
 
 @router.get("/{code}")
 async def get_report(code: str, db: AsyncSession = Depends(get_db)):
+    excluded = ConfigLoader().get_excluded_zones()
     result = await db.execute(select(Report).where(Report.code == code))
     report = result.scalar_one_or_none()
     if not report:
@@ -131,6 +135,7 @@ async def get_report(code: str, db: AsyncSession = Depends(get_db)):
         "start_time": report.start_time.isoformat(),
         "end_time": report.end_time.isoformat(),
         "player_names": report.player_names,
+        "informational": report.zone_id in excluded if excluded else False,
         "scores": [
             {
                 "player_name": name,

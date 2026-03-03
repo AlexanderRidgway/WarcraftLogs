@@ -33,6 +33,11 @@ async def get_gear():
     return config.get_gear_check()
 
 
+@router.get("/excluded-zones")
+async def get_excluded_zones():
+    return config.get_excluded_zones()
+
+
 class UpdateTargetRequest(BaseModel):
     target: int
 

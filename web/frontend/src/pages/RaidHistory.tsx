@@ -23,8 +23,13 @@ export default function RaidHistory() {
                 className="no-underline group"
               >
                 <div className="bg-bg-surface border border-border-default rounded-xl p-5 transition-all duration-200 group-hover:-translate-y-1 group-hover:shadow-xl group-hover:shadow-accent-gold/5 group-hover:border-accent-gold/30">
-                  <div className="font-semibold text-text-primary group-hover:text-accent-gold transition-colors">
+                  <div className="font-semibold text-text-primary group-hover:text-accent-gold transition-colors flex items-center gap-2">
                     {r.zone_name}
+                    {r.informational && (
+                      <span className="text-[10px] px-1.5 py-0.5 bg-blue-500/15 text-blue-400 rounded-full font-medium uppercase tracking-wider">
+                        Info
+                      </span>
+                    )}
                   </div>
                   <div className="text-sm text-text-secondary mt-1">
                     {new Date(r.start_time).toLocaleDateString()}

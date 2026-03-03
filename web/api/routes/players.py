@@ -3,6 +3,7 @@ from sqlalchemy import select, and_
 from sqlalchemy.ext.asyncio import AsyncSession
 from datetime import datetime, timedelta
 
+from src.config.loader import ConfigLoader
 from web.api.database import get_db
 from web.api.models import Player, Ranking, Score, GearSnapshot, UtilityData, ConsumablesData, AttendanceRecord, Report, User
 from web.api.auth import get_current_officer
@@ -33,10 +34,16 @@ async def get_player(name: str, db: AsyncSession = Depends(get_db)):
     if not player:
         raise HTTPException(status_code=404, detail="Player not found")
 
+    excluded = ConfigLoader().get_excluded_zones()
+
     scores_result = await db.execute(
-        select(Score).where(Score.player_id == player.id).order_by(Score.recorded_at.desc()).limit(20)
+        select(Score, Report.zone_id)
+        .join(Report, Report.code == Score.report_code)
+        .where(Score.player_id == player.id)
+        .order_by(Score.recorded_at.desc())
+        .limit(20)
     )
-    scores = scores_result.scalars().all()
+    scores = scores_result.all()
 
     return {
         "name": player.name,
@@ -54,8 +61,9 @@ async def get_player(name: str, db: AsyncSession = Depends(get_db)):
                 "consumables_score": s.consumables_score,
                 "fight_count": s.fight_count,
                 "recorded_at": s.recorded_at.isoformat() if s.recorded_at else None,
+                "informational": zone_id in excluded if excluded else False,
             }
-            for s in scores
+            for s, zone_id in scores
         ],
     }
 
@@ -211,11 +219,15 @@ async def get_player_trends(name: str, weeks: int = Query(default=8, ge=1, le=52
         raise HTTPException(status_code=404, detail="Player not found")
 
     cutoff = datetime.utcnow() - timedelta(weeks=weeks)
-    scores_result = await db.execute(
+    excluded = ConfigLoader().get_excluded_zones()
+    trend_query = (
         select(Score)
+        .join(Report, Report.code == Score.report_code)
         .where(Score.player_id == player.id, Score.recorded_at >= cutoff)
-        .order_by(Score.recorded_at.asc())
     )
+    if excluded:
+        trend_query = trend_query.where(Report.zone_id.notin_(excluded))
+    scores_result = await db.execute(trend_query.order_by(Score.recorded_at.asc()))
     scores = scores_result.scalars().all()
 
     return [

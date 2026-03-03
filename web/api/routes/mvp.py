@@ -3,8 +3,9 @@ from sqlalchemy import select, func
 from sqlalchemy.ext.asyncio import AsyncSession
 from datetime import datetime, timedelta
 
+from src.config.loader import ConfigLoader
 from web.api.database import get_db
-from web.api.models import Player, Score
+from web.api.models import Player, Score, Report
 
 router = APIRouter(prefix="/api/mvp", tags=["mvp"])
 
@@ -17,7 +18,8 @@ async def get_mvp(weeks_ago: int = Query(default=0, ge=0, le=8), db: AsyncSessio
     start_of_week = today - timedelta(days=today.weekday() + (weeks_ago * 7))
     end_of_week = start_of_week + timedelta(days=7)
 
-    result = await db.execute(
+    excluded = ConfigLoader().get_excluded_zones()
+    query = (
         select(
             Player.name,
             Player.class_name,
@@ -29,11 +31,16 @@ async def get_mvp(weeks_ago: int = Query(default=0, ge=0, le=8), db: AsyncSessio
             func.max(Score.spec).label("spec"),
         )
         .join(Score, Score.player_id == Player.id)
+        .join(Report, Report.code == Score.report_code)
         .where(
             Score.recorded_at >= datetime.combine(start_of_week, datetime.min.time()),
             Score.recorded_at < datetime.combine(end_of_week, datetime.min.time()),
         )
-        .group_by(Player.name, Player.class_name)
+    )
+    if excluded:
+        query = query.where(Report.zone_id.notin_(excluded))
+    result = await db.execute(
+        query.group_by(Player.name, Player.class_name)
         .order_by(func.avg(Score.overall_score).desc())
         .limit(1)
     )

@@ -3,8 +3,9 @@ from sqlalchemy import select, func
 from sqlalchemy.ext.asyncio import AsyncSession
 from datetime import datetime, timedelta
 
+from src.config.loader import ConfigLoader
 from web.api.database import get_db
-from web.api.models import Player, Score, AttendanceRecord
+from web.api.models import Player, Score, AttendanceRecord, Report
 
 router = APIRouter(prefix="/api/roster", tags=["roster"])
 
@@ -12,18 +13,22 @@ router = APIRouter(prefix="/api/roster", tags=["roster"])
 @router.get("/health")
 async def roster_health(weeks: int = Query(default=4, ge=1, le=52), db: AsyncSession = Depends(get_db)):
     cutoff = datetime.utcnow() - timedelta(weeks=weeks)
+    excluded = ConfigLoader().get_excluded_zones()
 
     # Class/spec distribution from recent scores
-    dist_result = await db.execute(
+    dist_query = (
         select(
             Score.spec,
             Player.class_name,
             func.count(func.distinct(Player.id)).label("count"),
         )
         .join(Player, Player.id == Score.player_id)
+        .join(Report, Report.code == Score.report_code)
         .where(Score.recorded_at >= cutoff, Player.active == True)
-        .group_by(Score.spec, Player.class_name)
     )
+    if excluded:
+        dist_query = dist_query.where(Report.zone_id.notin_(excluded))
+    dist_result = await db.execute(dist_query.group_by(Score.spec, Player.class_name))
     distribution = [
         {"spec": row.spec, "class_name": row.class_name, "count": row.count}
         for row in dist_result.all()
@@ -36,11 +41,14 @@ async def roster_health(weeks: int = Query(default=4, ge=1, le=52), db: AsyncSes
     at_risk = []
     players_result = await db.execute(select(Player).where(Player.active == True))
     for player in players_result.scalars().all():
-        scores_result = await db.execute(
+        risk_query = (
             select(Score)
+            .join(Report, Report.code == Score.report_code)
             .where(Score.player_id == player.id, Score.recorded_at >= cutoff)
-            .order_by(Score.recorded_at.asc())
         )
+        if excluded:
+            risk_query = risk_query.where(Report.zone_id.notin_(excluded))
+        scores_result = await db.execute(risk_query.order_by(Score.recorded_at.asc()))
         scores = scores_result.scalars().all()
         if len(scores) >= 4:
             first_half = scores[:len(scores)//2]

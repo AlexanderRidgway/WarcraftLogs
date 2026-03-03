@@ -39,6 +39,10 @@ class ConfigLoader:
         """Return the attendance requirements list, or empty list if not configured."""
         return self._data.get("attendance", [])
 
+    def get_excluded_zones(self) -> list[int]:
+        """Return the list of zone IDs excluded from performance metrics."""
+        return self._data.get("excluded_zones", [])
+
     def get_gear_check(self) -> dict:
         """Return the gear check config, or defaults if not configured."""
         config = self._data.get("gear_check")
@@ -48,7 +52,7 @@ class ConfigLoader:
 
     def all_specs(self) -> list[str]:
         """Return all configured spec keys, excluding non-spec top-level keys."""
-        return [k for k in self._data.keys() if k not in ("consumables", "attendance", "gear_check")]
+        return [k for k in self._data.keys() if k not in ("consumables", "attendance", "gear_check", "excluded_zones")]
 
     def update_target(self, spec_key: str, metric: str, new_target: int) -> None:
         """Update the target for a metric in a spec profile and persist to disk."""

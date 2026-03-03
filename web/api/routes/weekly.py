@@ -4,6 +4,7 @@ from fastapi import APIRouter, Depends, Query
 from sqlalchemy import select, func
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from src.config.loader import ConfigLoader
 from web.api.database import get_db
 from web.api.models import Report, Score, Player, AttendanceRecord, GearSnapshot
 
@@ -50,21 +51,27 @@ async def weekly_recap(
             "gear_issues": [],
         }
 
-    # Top Performers: avg overall_score across all reports this week, top 10
-    top_result = await db.execute(
-        select(
-            Player.name,
-            Player.class_name,
-            func.avg(Score.overall_score).label("avg_score"),
-            func.avg(Score.parse_score).label("avg_parse"),
-            func.count(Score.id).label("fight_count"),
+    # Top Performers: avg overall_score across non-excluded reports this week, top 10
+    excluded = ConfigLoader().get_excluded_zones()
+    scored_codes = [r.code for r in reports if not (excluded and r.zone_id in excluded)]
+
+    if scored_codes:
+        top_result = await db.execute(
+            select(
+                Player.name,
+                Player.class_name,
+                func.avg(Score.overall_score).label("avg_score"),
+                func.avg(Score.parse_score).label("avg_parse"),
+                func.count(Score.id).label("fight_count"),
+            )
+            .join(Player, Score.player_id == Player.id)
+            .where(Score.report_code.in_(scored_codes))
+            .group_by(Player.name, Player.class_name)
+            .order_by(func.avg(Score.overall_score).desc())
+            .limit(10)
         )
-        .join(Player, Score.player_id == Player.id)
-        .where(Score.report_code.in_(report_codes))
-        .group_by(Player.name, Player.class_name)
-        .order_by(func.avg(Score.overall_score).desc())
-        .limit(10)
-    )
+    else:
+        top_result = None
     top_performers = [
         {
             "name": row.name,
@@ -73,7 +80,7 @@ async def weekly_recap(
             "avg_parse": round(row.avg_parse, 1),
             "fight_count": row.fight_count,
         }
-        for row in top_result.all()
+        for row in (top_result.all() if top_result else [])
     ]
 
     # Zone Summaries: group reports by zone, per zone get top 3 and stats

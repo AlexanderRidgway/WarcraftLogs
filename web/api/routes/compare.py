@@ -3,8 +3,9 @@ from sqlalchemy import select, func
 from sqlalchemy.ext.asyncio import AsyncSession
 from datetime import datetime, timedelta
 
+from src.config.loader import ConfigLoader
 from web.api.database import get_db
-from web.api.models import Player, Score
+from web.api.models import Player, Score, Report
 
 router = APIRouter(prefix="/api/compare", tags=["compare"])
 
@@ -16,8 +17,9 @@ async def compare_spec(
     db: AsyncSession = Depends(get_db),
 ):
     cutoff = datetime.utcnow() - timedelta(weeks=weeks)
+    excluded = ConfigLoader().get_excluded_zones()
 
-    result = await db.execute(
+    query = (
         select(
             Player.name,
             Player.class_name,
@@ -27,11 +29,16 @@ async def compare_spec(
             func.count(Score.id).label("fight_count"),
         )
         .join(Score, Score.player_id == Player.id)
+        .join(Report, Report.code == Score.report_code)
         .where(
             Score.spec == spec,
             Score.recorded_at >= cutoff,
         )
-        .group_by(Player.name, Player.class_name)
+    )
+    if excluded:
+        query = query.where(Report.zone_id.notin_(excluded))
+    result = await db.execute(
+        query.group_by(Player.name, Player.class_name)
         .order_by(func.avg(Score.overall_score).desc())
     )
 

@@ -19,6 +19,7 @@ export interface PlayerScore {
   consumables_score: number | null
   fight_count: number
   recorded_at: string
+  informational?: boolean
 }
 
 export interface Ranking {
@@ -75,6 +76,7 @@ export interface ReportSummary {
   wipe_count?: number
   death_count?: number
   avg_parse?: number | null
+  informational?: boolean
 }
 
 export interface BossRankingEntry {

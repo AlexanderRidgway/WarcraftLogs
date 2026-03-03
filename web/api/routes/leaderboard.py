@@ -3,6 +3,7 @@ from sqlalchemy import select, func
 from sqlalchemy.ext.asyncio import AsyncSession
 from datetime import datetime, timedelta
 
+from src.config.loader import ConfigLoader
 from web.api.database import get_db
 from web.api.models import Player, Score, Report
 
@@ -16,10 +17,11 @@ async def leaderboard(
     db: AsyncSession = Depends(get_db),
 ):
     cutoff = datetime.utcnow() - timedelta(weeks=weeks)
+    excluded = ConfigLoader().get_excluded_zones()
 
     order_col = func.avg(Score.parse_score) if sort_by == "parse" else func.avg(Score.overall_score)
 
-    result = await db.execute(
+    query = (
         select(
             Player.name,
             Player.class_name,
@@ -29,9 +31,13 @@ async def leaderboard(
             func.max(Score.spec).label("spec"),
         )
         .join(Score, Score.player_id == Player.id)
+        .join(Report, Report.code == Score.report_code)
         .where(Score.recorded_at >= cutoff, Player.active == True)
-        .group_by(Player.name, Player.class_name)
-        .order_by(order_col.desc())
+    )
+    if excluded:
+        query = query.where(Report.zone_id.notin_(excluded))
+    result = await db.execute(
+        query.group_by(Player.name, Player.class_name).order_by(order_col.desc())
     )
     rows = result.all()
 
@@ -56,8 +62,9 @@ async def guild_trends(
 ):
     """Average guild parse and score per report over time."""
     cutoff = datetime.utcnow() - timedelta(weeks=weeks)
+    excluded = ConfigLoader().get_excluded_zones()
 
-    result = await db.execute(
+    query = (
         select(
             Score.report_code,
             Report.start_time,
@@ -67,8 +74,11 @@ async def guild_trends(
         )
         .join(Report, Report.code == Score.report_code)
         .where(Report.start_time >= cutoff)
-        .group_by(Score.report_code, Report.start_time)
-        .order_by(Report.start_time.asc())
+    )
+    if excluded:
+        query = query.where(Report.zone_id.notin_(excluded))
+    result = await db.execute(
+        query.group_by(Score.report_code, Report.start_time).order_by(Report.start_time.asc())
     )
     rows = result.all()
 

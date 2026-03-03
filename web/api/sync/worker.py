@@ -266,6 +266,14 @@ class SyncWorker:
             logger.info("No attendance requirements configured, skipping attendance computation")
             return
 
+        # Skip zones that are excluded from performance metrics
+        excluded = set(self.config.get_excluded_zones())
+        if excluded:
+            requirements = [r for r in requirements if r["zone_id"] not in excluded]
+            if not requirements:
+                logger.info("All attendance zones are excluded, skipping attendance computation")
+                return
+
         async with async_session() as session:
             # Load all reports and players
             reports_result = await session.execute(select(Report).order_by(Report.start_time))

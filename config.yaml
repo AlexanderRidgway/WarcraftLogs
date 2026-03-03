@@ -84,12 +84,11 @@ paladin:holy:
       spell_id: 20271
       type: count
       target: 15
-    - metric: devotion_aura_uptime
-      label: "Devotion Aura"
-      spell_id: 10293
-      type: uptime
-      subtype: buff
-      target: 90
+    - metric: blessing_count
+      label: "Blessing (any)"
+      spell_ids: [25291, 20217, 27143, 1038, 27144, 27168, 25916, 25898, 27145, 25895, 25899]
+      type: count
+      target: 3
 
 paladin:protection:
   utility_weight: 0.70
@@ -165,7 +164,7 @@ hunter:survival:
   contributions:
     - metric: expose_weakness_uptime
       label: "Expose Weakness"
-      spell_id: 34503
+      spell_ids: [34500, 34502, 34503]
       type: uptime
       target: 50
     - metric: hunters_mark_uptime
@@ -188,15 +187,9 @@ shaman:restoration:
   parse_weight: 0.50
   consumables_weight: 0.00
   contributions:
-    - metric: windfury_totem_uptime
-      label: "Windfury Totem"
-      spell_id: 25587
-      type: uptime
-      subtype: buff
-      target: 90
-    - metric: mana_spring_totem_uptime
-      label: "Mana Spring Totem"
-      spell_id: 25570
+    - metric: totem_uptime
+      label: "Totem (any)"
+      spell_ids: [25587, 25570, 3738, 30706, 25359, 25361, 25567, 25509, 16190]
       type: uptime
       subtype: buff
       target: 90
@@ -211,15 +204,9 @@ shaman:elemental:
   parse_weight: 0.60
   consumables_weight: 0.00
   contributions:
-    - metric: totem_of_wrath_uptime
-      label: "Totem of Wrath"
-      spell_id: 30706
-      type: uptime
-      subtype: buff
-      target: 90
-    - metric: wrath_of_air_uptime
-      label: "Wrath of Air Totem"
-      spell_id: 3738
+    - metric: totem_uptime
+      label: "Totem (any)"
+      spell_ids: [25587, 25570, 3738, 30706, 25359, 25361, 25567, 25509, 16190]
       type: uptime
       subtype: buff
       target: 90
@@ -229,21 +216,9 @@ shaman:enhancement:
   parse_weight: 0.55
   consumables_weight: 0.00
   contributions:
-    - metric: windfury_totem_uptime
-      label: "Windfury Totem"
-      spell_id: 25587
-      type: uptime
-      subtype: buff
-      target: 90
-    - metric: grace_of_air_uptime
-      label: "Grace of Air Totem"
-      spell_id: 25359
-      type: uptime
-      subtype: buff
-      target: 90
-    - metric: strength_of_earth_uptime
-      label: "Strength of Earth Totem"
-      spell_id: 25361
+    - metric: totem_uptime
+      label: "Totem (any)"
+      spell_ids: [25587, 25570, 3738, 30706, 25359, 25361, 25567, 25509, 16190]
       type: uptime
       subtype: buff
       target: 90
@@ -253,21 +228,21 @@ shaman:enhancement:
 # ──────────────────────────────────────────────
 
 druid:feral:
-  utility_weight: 0.60
-  parse_weight: 0.40
+  utility_weight: 0.00
+  parse_weight: 1.00
   consumables_weight: 0.00
-  contributions:
-    - metric: faerie_fire_uptime
-      label: "Faerie Fire"
-      spell_id: 16857
-      type: uptime
-      target: 90
+  contributions: []
 
 druid:restoration:
   utility_weight: 0.45
   parse_weight: 0.55
   consumables_weight: 0.00
   contributions:
+    - metric: faerie_fire_uptime
+      label: "Faerie Fire"
+      spell_ids: [770, 16857]
+      type: uptime
+      target: 85
     - metric: innervate_count
       label: "Innervate"
       spell_id: 29166
@@ -289,11 +264,6 @@ druid:balance:
   parse_weight: 0.70
   consumables_weight: 0.00
   contributions:
-    - metric: faerie_fire_uptime
-      label: "Faerie Fire"
-      spell_id: 770
-      type: uptime
-      target: 85
     - metric: innervate_count
       label: "Innervate"
       spell_id: 29166
@@ -422,7 +392,7 @@ priest:shadow:
       target: 85
     - metric: misery_uptime
       label: "Misery"
-      spell_id: 33198
+      spell_ids: [33196, 33197, 33198, 33199, 33200]
       type: uptime
       target: 85
     - metric: vampiric_embrace_uptime
@@ -502,6 +472,16 @@ consumables:
     type: count
     target: 3
     optional: true
+
+# ──────────────────────────────────────────────
+# EXCLUDED ZONES
+# Reports from these zones are still synced and visible on the website,
+# but they do NOT count towards leaderboards, player scores, MVP,
+# weekly top performers, insights, trends, attendance, or any aggregates.
+# ──────────────────────────────────────────────
+
+excluded_zones:
+  - 1047   # Karazhan
 
 # ──────────────────────────────────────────────
 # ATTENDANCE REQUIREMENTS
