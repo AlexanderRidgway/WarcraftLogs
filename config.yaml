@@ -151,11 +151,12 @@ hunter:beast mastery:
   parse_weight: 0.80
   consumables_weight: 0.00
   contributions:
-    - metric: misdirection_count
-      label: "Misdirection"
+    - metric: misdirection_on_pull
+      label: "Misdirection (Pull)"
       spell_id: 34477
-      type: count
-      target: 5
+      type: pull_check
+      window_ms: 15000
+      target: 100
 
 hunter:survival:
   utility_weight: 0.35
@@ -172,11 +173,12 @@ hunter:survival:
       spell_id: 14325
       type: uptime
       target: 90
-    - metric: misdirection_count
-      label: "Misdirection"
+    - metric: misdirection_on_pull
+      label: "Misdirection (Pull)"
       spell_id: 34477
-      type: count
-      target: 5
+      type: pull_check
+      window_ms: 15000
+      target: 100
 
 # ──────────────────────────────────────────────
 # SHAMAN

@@ -220,6 +220,7 @@ class WarcraftLogsClient:
         """
         uptime_contribs = [c for c in contributions if c["type"] == "uptime"]
         count_contribs = [c for c in contributions if c["type"] == "count"]
+        pull_check_contribs = [c for c in contributions if c["type"] == "pull_check"]
 
         result = {}
 
@@ -261,6 +262,16 @@ class WarcraftLogsClient:
             for contrib in count_contribs:
                 total = sum(e["total"] for e in entries if self._contrib_matches(e, contrib))
                 result[contrib["metric"]] = total
+
+        # pull_check: binary check — was the spell cast in the first N seconds of the window?
+        if pull_check_contribs:
+            window_ms = pull_check_contribs[0].get("window_ms", 15000)
+            pull_end = start + window_ms
+            cast_data = await self._query_table(report_code, source_id, start, pull_end, "Casts")
+            entries = cast_data.get("entries", [])
+            for contrib in pull_check_contribs:
+                total = sum(e["total"] for e in entries if self._contrib_matches(e, contrib))
+                result[contrib["metric"]] = 100.0 if total > 0 else 0.0
 
         return result
 

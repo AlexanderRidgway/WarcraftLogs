@@ -563,3 +563,68 @@ async def test_get_fight_stats_zero_duration():
 
     stats = await client.get_fight_stats("TEST", 100, 100)
     assert stats == {}
+
+
+@pytest.mark.asyncio
+async def test_pull_check_returns_100_when_cast_in_window():
+    """pull_check type should return 100 if the spell was cast in the pull window."""
+    client = WarcraftLogsClient(client_id="id", client_secret="secret")
+    client._token = "mock_token"
+    client._token_expiry = float("inf")
+
+    mock_response = {
+        "data": {
+            "reportData": {
+                "report": {
+                    "table": {
+                        "data": {
+                            "entries": [
+                                {"name": "Misdirection", "guid": 34477, "total": 1},
+                            ],
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    contributions = [
+        {"spell_id": 34477, "metric": "md_pull", "type": "pull_check", "window_ms": 15000}
+    ]
+
+    client.query = AsyncMock(return_value=mock_response)
+    result = await client.get_utility_data("abc", source_id=1, start=0, end=300000, contributions=contributions)
+    assert result["md_pull"] == 100.0
+    # Verify the query used the pull window (start + 15000), not the full fight end
+    call_args = client.query.call_args
+    assert call_args[0][1]["endTime"] == 15000
+
+
+@pytest.mark.asyncio
+async def test_pull_check_returns_0_when_not_cast():
+    """pull_check type should return 0 if the spell was not cast in the pull window."""
+    client = WarcraftLogsClient(client_id="id", client_secret="secret")
+    client._token = "mock_token"
+    client._token_expiry = float("inf")
+
+    mock_response = {
+        "data": {
+            "reportData": {
+                "report": {
+                    "table": {
+                        "data": {
+                            "entries": [],
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    contributions = [
+        {"spell_id": 34477, "metric": "md_pull", "type": "pull_check", "window_ms": 15000}
+    ]
+
+    client.query = AsyncMock(return_value=mock_response)
+    result = await client.get_utility_data("abc", source_id=1, start=0, end=300000, contributions=contributions)
+    assert result["md_pull"] == 0.0

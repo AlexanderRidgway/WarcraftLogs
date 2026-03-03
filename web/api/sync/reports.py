@@ -148,22 +148,24 @@ async def process_report(
             "encounter_name": "Average",
         })
 
-        # Utility data — uptime metrics per boss fight (averaged), counts over full report
+        # Utility data — uptime/pull_check per boss fight (averaged), counts over full report
         utility_data = {}
         if spec_profile and spec_profile.get("contributions") and name in source_map:
             contribs = spec_profile["contributions"]
             uptime_contribs = [c for c in contribs if c["type"] == "uptime"]
             count_contribs = [c for c in contribs if c["type"] == "count"]
+            pull_check_contribs = [c for c in contribs if c["type"] == "pull_check"]
 
-            # Uptime metrics: calculate per boss fight and average
-            if uptime_contribs and boss_fight_windows:
+            # Per-fight metrics (uptime + pull_check): calculate per boss fight and average
+            per_fight_contribs = uptime_contribs + pull_check_contribs
+            if per_fight_contribs and boss_fight_windows:
                 per_metric_totals: dict[str, float] = {}
                 per_metric_counts: dict[str, int] = {}
                 for f_start, f_end in boss_fight_windows:
                     try:
                         fight_data = await wcl.get_utility_data(
                             report_code, source_map[name],
-                            f_start, f_end, uptime_contribs,
+                            f_start, f_end, per_fight_contribs,
                         )
                         for metric, value in fight_data.items():
                             per_metric_totals[metric] = per_metric_totals.get(metric, 0) + value
@@ -174,7 +176,7 @@ async def process_report(
                     if per_metric_counts.get(metric, 0) > 0:
                         utility_data[metric] = per_metric_totals[metric] / per_metric_counts[metric]
             elif uptime_contribs:
-                # No boss fights found — fall back to full report
+                # No boss fights found — fall back to full report (uptime only)
                 try:
                     utility_data = await wcl.get_utility_data(
                         report_code, source_map[name],
