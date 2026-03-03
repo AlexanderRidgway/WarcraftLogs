@@ -9,12 +9,14 @@ import ParseBar from '../components/ParseBar'
 import GearGrid from '../components/GearGrid'
 import { SkeletonTable, SkeletonCard } from '../components/Skeleton'
 import TrendChart from '../components/TrendChart'
+import { useScoreAccess } from '../hooks/useScoreAccess'
 
 type Tab = 'performance' | 'gear' | 'attendance'
 
 export default function PlayerProfile() {
   const { name } = useParams<{ name: string }>()
   const navigate = useNavigate()
+  const { canViewScores } = useScoreAccess()
   const [tab, setTab] = useState<Tab>('performance')
   const [weeks, setWeeks] = useState(4)
 
@@ -45,19 +47,19 @@ export default function PlayerProfile() {
   const { data: trends } = useQuery({
     queryKey: ['trends', name, weeks],
     queryFn: () => api.players.trends(name!, weeks),
-    enabled: !!name && tab === 'performance',
+    enabled: !!name && tab === 'performance' && canViewScores,
   })
 
   const { data: insights } = useQuery({
     queryKey: ['insights', name, weeks],
     queryFn: () => api.players.insights(name!, weeks),
-    enabled: !!name,
+    enabled: !!name && canViewScores,
   })
 
   const { data: badges } = useQuery({
     queryKey: ['badges', name],
     queryFn: () => api.players.badges(name!),
-    enabled: !!name,
+    enabled: !!name && canViewScores,
   })
 
   if (isLoading) return <Layout><div className="space-y-4"><SkeletonCard /><SkeletonCard /></div></Layout>
@@ -91,7 +93,7 @@ export default function PlayerProfile() {
             : player.class_name} — {player.server} ({player.region.toUpperCase()})
         </p>
         {/* Badges */}
-        {badges && badges.length > 0 && (
+        {canViewScores && badges && badges.length > 0 && (
           <div className="flex flex-wrap gap-2 mt-3">
             {badges.map((b: any, i: number) => (
               <span key={i} className="px-2 py-1 bg-accent-gold/10 border border-accent-gold/30 rounded-lg text-xs text-accent-gold" title={b.details}>
@@ -104,12 +106,12 @@ export default function PlayerProfile() {
 
       {/* Score cards */}
       <div className="flex gap-4 mb-6">
-        <ScoreCard label="Consistency" value={avgScore} />
+        {canViewScores && <ScoreCard label="Consistency" value={avgScore} />}
         <ScoreCard label="Avg Parse" value={avgParse} />
       </div>
 
       {/* Insights */}
-      {insights && insights.length > 0 && (
+      {canViewScores && insights && insights.length > 0 && (
         <div className="space-y-2 mb-6">
           {insights.map((insight, i) => (
             <div
@@ -168,7 +170,7 @@ export default function PlayerProfile() {
       {/* Performance tab */}
       {tab === 'performance' && (
         <>
-        {trends && trends.length > 1 && <TrendChart data={trends} />}
+        {canViewScores && trends && trends.length > 1 && <TrendChart data={trends} />}
         <div className="bg-bg-surface border border-border-default rounded-xl overflow-hidden">
           <table className="w-full">
             <thead>

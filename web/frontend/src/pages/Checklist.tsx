@@ -4,6 +4,7 @@ import { Link } from 'react-router-dom'
 import { api } from '../api/client'
 import Layout from '../components/Layout'
 import ClassIcon from '../components/ClassIcon'
+import { useScoreAccess } from '../hooks/useScoreAccess'
 
 interface ChecklistPlayer {
   name: string
@@ -23,6 +24,7 @@ const READINESS_STYLES = {
 const READINESS_LABEL = { green: 'Ready', yellow: 'Warning', red: 'Not Ready' }
 
 export default function Checklist() {
+  const { canViewScores } = useScoreAccess()
   const [filter, setFilter] = useState<string | null>(null)
   const queryClient = useQueryClient()
   const isOfficer = !!localStorage.getItem('auth_token')
@@ -91,7 +93,7 @@ export default function Checklist() {
                   {p.attendance_missed && (
                     <span className="px-2 py-0.5 rounded bg-danger/10 text-danger border border-danger/20">Missed attendance last week</span>
                   )}
-                  {p.consumables_avg !== null && p.consumables_avg < 80 && (
+                  {canViewScores && p.consumables_avg !== null && p.consumables_avg < 80 && (
                     <span className="px-2 py-0.5 rounded bg-warning/10 text-warning border border-warning/20">
                       Consumables: {p.consumables_avg}%
                     </span>

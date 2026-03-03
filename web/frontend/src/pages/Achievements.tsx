@@ -2,6 +2,7 @@ import { useQuery } from '@tanstack/react-query'
 import { Link } from 'react-router-dom'
 import { api } from '../api/client'
 import Layout from '../components/Layout'
+import { useScoreAccess } from '../hooks/useScoreAccess'
 
 const BADGE_ICONS: Record<string, string> = {
   parse_god: '\u{1F451}',
@@ -15,10 +16,24 @@ const BADGE_ICONS: Record<string, string> = {
 }
 
 export default function Achievements() {
+  const { canViewScores } = useScoreAccess()
+
   const { data: achievements, isLoading } = useQuery({
     queryKey: ['achievements'],
     queryFn: () => api.achievements(),
+    enabled: canViewScores,
   })
+
+  if (!canViewScores) {
+    return (
+      <Layout>
+        <div className="flex flex-col items-center justify-center py-20">
+          <h1 className="text-xl font-bold text-text-primary mb-2">Officer Access Required</h1>
+          <p className="text-sm text-text-secondary">Log in as an officer to view performance data.</p>
+        </div>
+      </Layout>
+    )
+  }
 
   if (isLoading) return <Layout><div className="text-text-muted text-sm">Loading achievements...</div></Layout>
 

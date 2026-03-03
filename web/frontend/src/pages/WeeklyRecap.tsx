@@ -5,16 +5,30 @@ import { api } from '../api/client'
 import Layout from '../components/Layout'
 import ClassIcon from '../components/ClassIcon'
 import { SkeletonTable } from '../components/Skeleton'
+import { useScoreAccess } from '../hooks/useScoreAccess'
 
 const MEDAL = ['', '\u{1F947}', '\u{1F948}', '\u{1F949}']
 
 export default function WeeklyRecap() {
+  const { canViewScores } = useScoreAccess()
   const [weeksAgo, setWeeksAgo] = useState(0)
 
   const { data, isLoading } = useQuery({
     queryKey: ['weekly', weeksAgo],
     queryFn: () => api.weekly(weeksAgo),
+    enabled: canViewScores,
   })
+
+  if (!canViewScores) {
+    return (
+      <Layout>
+        <div className="flex flex-col items-center justify-center py-20">
+          <h1 className="text-xl font-bold text-text-primary mb-2">Officer Access Required</h1>
+          <p className="text-sm text-text-secondary">Log in as an officer to view performance data.</p>
+        </div>
+      </Layout>
+    )
+  }
 
   return (
     <Layout>

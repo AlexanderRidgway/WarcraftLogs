@@ -5,6 +5,7 @@ import { PieChart, Pie, Cell, Tooltip, ResponsiveContainer } from 'recharts'
 import { api } from '../api/client'
 import Layout from '../components/Layout'
 import { CHART_COLORS } from '../components/ChartTheme'
+import { useScoreAccess } from '../hooks/useScoreAccess'
 
 const CLASS_COLORS: Record<string, string> = {
   warrior: '#C79C6E',
@@ -25,6 +26,8 @@ export default function Roster() {
     queryKey: ['roster-health', weeks],
     queryFn: () => api.roster(weeks),
   })
+
+  const { canViewScores } = useScoreAccess()
 
   if (isLoading) return <Layout><div className="text-text-muted text-sm">Loading roster data...</div></Layout>
 
@@ -80,6 +83,7 @@ export default function Roster() {
         </div>
 
         {/* At Risk */}
+        {canViewScores && (
         <div className="bg-bg-surface border border-border-default rounded-xl p-4">
           <h2 className="text-sm font-semibold text-text-primary mb-3">At Risk</h2>
           {atRiskSpecs.length > 0 && (
@@ -108,6 +112,7 @@ export default function Roster() {
             <div className="text-text-muted text-sm">No at-risk players or specs detected</div>
           ) : null}
         </div>
+        )}
       </div>
 
       {/* Attendance Heatmap */}

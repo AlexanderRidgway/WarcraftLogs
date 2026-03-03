@@ -8,6 +8,7 @@ import Layout from '../components/Layout'
 import ClassIcon, { getSpecLabel } from '../components/ClassIcon'
 import ParseBar from '../components/ParseBar'
 import { SkeletonTable } from '../components/Skeleton'
+import { useScoreAccess } from '../hooks/useScoreAccess'
 
 export default function RaidDetail() {
   const { code } = useParams<{ code: string }>()
@@ -29,10 +30,12 @@ export default function RaidDetail() {
     enabled: !!code,
   })
 
+  const { canViewScores } = useScoreAccess()
+
   const { data: utilityData } = useQuery({
     queryKey: ['utility', code],
     queryFn: () => api.reports.utility(code!),
-    enabled: !!code,
+    enabled: !!code && canViewScores,
   })
 
   const { data: gearData } = useQuery({
@@ -91,7 +94,7 @@ export default function RaidDetail() {
             <tr className="border-b border-border-default">
               <th className="p-3 text-left text-xs font-semibold text-text-muted uppercase tracking-wider">Player</th>
               <th className="p-3 text-left text-xs font-semibold text-text-muted uppercase tracking-wider hidden sm:table-cell">Spec</th>
-              <th className="p-3 text-left text-xs font-semibold text-text-muted uppercase tracking-wider">Score</th>
+              {canViewScores && <th className="p-3 text-left text-xs font-semibold text-text-muted uppercase tracking-wider">Score</th>}
               <th className="p-3 text-left text-xs font-semibold text-text-muted uppercase tracking-wider">Parse</th>
             </tr>
           </thead>
@@ -104,7 +107,7 @@ export default function RaidDetail() {
                   </Link>
                 </td>
                 <td className="p-3 text-sm text-text-secondary capitalize hidden sm:table-cell">{getSpecLabel(s.spec)}</td>
-                <td className="p-3 text-sm font-semibold text-accent-gold tabular-nums">{s.overall_score.toFixed(1)}</td>
+                {canViewScores && <td className="p-3 text-sm font-semibold text-accent-gold tabular-nums">{s.overall_score.toFixed(1)}</td>}
                 <td className="p-3"><ParseBar percent={s.parse_score} /></td>
               </tr>
             ))}
@@ -113,7 +116,7 @@ export default function RaidDetail() {
       </div>
 
       {/* Consumables */}
-      {consumables.length > 0 && (() => {
+      {canViewScores && consumables.length > 0 && (() => {
         const flags = report.consumable_flags || []
         const flaggedPlayers = flags.filter(f => !f.passed)
         const passedCount = flags.filter(f => f.passed).length
@@ -165,7 +168,7 @@ export default function RaidDetail() {
       })()}
 
       {/* Utility Breakdown */}
-      {utilityData && utilityData.length > 0 && (
+      {canViewScores && utilityData && utilityData.length > 0 && (
         <details className="bg-bg-surface border border-border-default rounded-xl overflow-hidden mt-6">
           <summary className="p-4 cursor-pointer text-sm font-semibold text-text-primary hover:bg-bg-hover transition-colors select-none">
             Utility Breakdown ({utilityData.length} players)

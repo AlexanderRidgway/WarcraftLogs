@@ -8,6 +8,7 @@ import Layout from '../components/Layout'
 import ClassIcon, { getSpecLabel } from '../components/ClassIcon'
 import ParseBar from '../components/ParseBar'
 import { SkeletonTable } from '../components/Skeleton'
+import { useScoreAccess } from '../hooks/useScoreAccess'
 
 const CLASSES = ['warrior', 'paladin', 'hunter', 'rogue', 'priest', 'shaman', 'mage', 'warlock', 'druid']
 const CLASS_ICONS: Record<string, string> = {
@@ -50,6 +51,7 @@ export default function Home() {
   const [roleFilter, setRoleFilter] = useState<RoleFilter>('all')
   const [sortKey, setSortKey] = useState<SortKey>('rank')
   const [sortAsc, setSortAsc] = useState(true)
+  const { canViewScores } = useScoreAccess()
   const [leaderboardTab, setLeaderboardTab] = useState<'parse' | 'score'>('parse')
 
   const { data: leaderboard, isLoading } = useQuery({
@@ -60,6 +62,7 @@ export default function Home() {
   const { data: mvp } = useQuery({
     queryKey: ['mvp'],
     queryFn: () => api.mvp(),
+    enabled: canViewScores,
   })
 
   const { data: guildTrends } = useQuery({
@@ -111,6 +114,7 @@ export default function Home() {
       </div>
 
       {/* Leaderboard tabs */}
+      {canViewScores && (
       <div className="flex gap-1 mb-5">
         <button
           onClick={() => setLeaderboardTab('parse')}
@@ -133,9 +137,10 @@ export default function Home() {
           Performance Score
         </button>
       </div>
+      )}
 
       {/* MVP of the Week */}
-      {leaderboardTab === 'score' && mvp && (
+      {canViewScores && leaderboardTab === 'score' && mvp && (
         <div className="mb-6 p-4 bg-gradient-to-r from-accent-gold/10 to-transparent border border-accent-gold/30 rounded-xl">
           <div className="flex items-center gap-1.5 mb-2">
             <svg className="w-5 h-5 text-accent-gold" fill="currentColor" viewBox="0 0 20 20">
@@ -246,7 +251,7 @@ export default function Home() {
               <Tooltip contentStyle={{ backgroundColor: CHART_COLORS.bg, border: `1px solid ${CHART_COLORS.grid}`, borderRadius: 8 }} />
               <Legend />
               <Line type="monotone" dataKey="avg_parse" name="Avg Parse" stroke={CHART_COLORS.info} strokeWidth={2} dot={{ r: 3 }} />
-              <Line type="monotone" dataKey="avg_score" name="Avg Score" stroke={CHART_COLORS.gold} strokeWidth={2} dot={{ r: 3 }} />
+              {canViewScores && <Line type="monotone" dataKey="avg_score" name="Avg Score" stroke={CHART_COLORS.gold} strokeWidth={2} dot={{ r: 3 }} />}
             </LineChart>
           </ResponsiveContainer>
         </div>
@@ -260,7 +265,7 @@ export default function Home() {
               <SortHeader label="Rank" field="rank" />
               <th className="p-3 text-left text-xs font-semibold text-text-muted uppercase tracking-wider">Player</th>
               <th className="p-3 text-left text-xs font-semibold text-text-muted uppercase tracking-wider hidden sm:table-cell">Spec</th>
-              {leaderboardTab === 'score' && <SortHeader label="Score" field="avg_score" />}
+              {canViewScores && leaderboardTab === 'score' && <SortHeader label="Score" field="avg_score" />}
               <SortHeader label="Avg Parse" field="avg_parse" />
               <SortHeader label="Fights" field="fight_count" />
             </tr>
@@ -283,7 +288,7 @@ export default function Home() {
                     </Link>
                   </td>
                   <td className="p-3 text-sm text-text-secondary capitalize hidden sm:table-cell">{entry.spec ? `${getSpecLabel(entry.spec)} ${entry.class_name}` : entry.class_name}</td>
-                  {leaderboardTab === 'score' && (
+                  {canViewScores && leaderboardTab === 'score' && (
                     <td className="p-3 text-sm font-semibold text-accent-gold tabular-nums">{entry.avg_score}</td>
                   )}
                   <td className="p-3"><ParseBar percent={entry.avg_parse} /></td>

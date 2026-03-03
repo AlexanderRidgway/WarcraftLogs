@@ -6,6 +6,7 @@ import { api } from '../api/client'
 import Layout from '../components/Layout'
 import ClassIcon from '../components/ClassIcon'
 import { CHART_COLORS, CHART_DEFAULTS } from '../components/ChartTheme'
+import { useScoreAccess } from '../hooks/useScoreAccess'
 
 const ALL_SPECS = [
   'warrior:protection', 'warrior:fury', 'warrior:arms',
@@ -29,13 +30,26 @@ interface CompareEntry {
 }
 
 export default function Compare() {
+  const { canViewScores } = useScoreAccess()
   const [spec, setSpec] = useState(ALL_SPECS[0])
   const [weeks, setWeeks] = useState(4)
 
   const { data: players, isLoading } = useQuery({
     queryKey: ['compare', spec, weeks],
     queryFn: () => api.compare(spec, weeks),
+    enabled: canViewScores,
   })
+
+  if (!canViewScores) {
+    return (
+      <Layout>
+        <div className="flex flex-col items-center justify-center py-20">
+          <h1 className="text-xl font-bold text-text-primary mb-2">Officer Access Required</h1>
+          <p className="text-sm text-text-secondary">Log in as an officer to view performance data.</p>
+        </div>
+      </Layout>
+    )
+  }
 
   return (
     <Layout>
