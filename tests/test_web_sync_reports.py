@@ -48,6 +48,8 @@ def mock_wcl():
         "Healbot": {"damage_done": 0, "dps": 0, "healing_done": 300000, "hps": 1666.7},
     }
     wcl.get_report_player_specs.return_value = {}
+    wcl.get_raid_casts_by_source.return_value = {}
+    wcl.get_raid_buff_uptime.return_value = 0.0
     return wcl
 
 
@@ -212,3 +214,104 @@ def test_compute_relative_scores_player_zero_others_cast():
     assert result["PriestC"] == 0.0
     # A: 20/30=66.7%, expected 33.3%, ratio=2.0 -> capped at 100
     assert result["PriestA"] == pytest.approx(100.0, abs=0.1)
+
+
+@pytest.fixture
+def mock_wcl_relative():
+    """Mock WCL client for relative + shared_responsibility testing."""
+    wcl = AsyncMock()
+    wcl.get_report_rankings.return_value = (
+        [
+            {"name": "PriestA", "class": "Priest", "spec": "Holy", "rankPercent": 80.0},
+            {"name": "PriestB", "class": "Priest", "spec": "Holy", "rankPercent": 75.0},
+            {"name": "MageA", "class": "Mage", "spec": "Fire", "rankPercent": 90.0},
+        ],
+        [],  # no per-fight rankings
+    )
+    wcl.get_report_players.return_value = [
+        {"id": 1, "name": "PriestA"},
+        {"id": 2, "name": "PriestB"},
+        {"id": 3, "name": "MageA"},
+    ]
+    wcl.get_report_timerange.return_value = {"start": 0, "end": 3600000}
+    wcl.get_report_gear.return_value = []
+    wcl.get_report_fights.return_value = [
+        {"id": 1, "name": "Gruul", "kill": True, "startTime": 0,
+         "endTime": 180000, "fightPercentage": 0, "encounterID": 649},
+    ]
+    wcl.get_report_deaths.return_value = []
+    wcl.get_fight_stats.return_value = {}
+    wcl.get_report_player_specs.return_value = {
+        "PriestA": "Priest:Holy",
+        "PriestB": "Priest:Holy",
+        "MageA": "Mage:Fire",
+    }
+
+    # Relative metric: PriestA did 20 dispels, PriestB did 10
+    wcl.get_raid_casts_by_source.return_value = {1: 20, 2: 10}
+
+    # Shared responsibility: Fortitude had 90% uptime
+    wcl.get_raid_buff_uptime.return_value = 90.0
+
+    # Individual utility (fire vuln, etc) and consumables
+    wcl.get_utility_data.return_value = {}
+    wcl.check_combo_presence.return_value = 0.0
+
+    return wcl
+
+
+@pytest.mark.asyncio
+async def test_process_report_relative_metrics(mock_wcl_relative):
+    """Relative metrics compute peer-share scores for same-class players."""
+    from web.api.sync.reports import process_report
+    from src.config.loader import ConfigLoader
+
+    config = ConfigLoader()
+    result = await process_report(
+        wcl=mock_wcl_relative,
+        report_code="test_rel",
+        config=config,
+    )
+
+    # Find dispel_magic utility entries for both priests
+    dispel_entries = [u for u in result["utility"] if u["metric_name"] == "dispel_magic_count"]
+
+    # Should have entries for both priests
+    priest_a = next((u for u in dispel_entries if u["player_name"] == "PriestA"), None)
+    priest_b = next((u for u in dispel_entries if u["player_name"] == "PriestB"), None)
+
+    assert priest_a is not None
+    assert priest_b is not None
+    # PriestA: 20/30 = 66.7%, expected 50%, ratio = 1.33 -> capped at 100
+    assert priest_a["score"] == pytest.approx(100.0, abs=0.1)
+    # PriestB: 10/30 = 33.3%, expected 50%, ratio = 0.667 -> 66.7
+    assert priest_b["score"] == pytest.approx(66.7, abs=0.1)
+
+
+@pytest.mark.asyncio
+async def test_process_report_shared_responsibility(mock_wcl_relative):
+    """Shared responsibility metrics apply same uptime to all class players."""
+    from web.api.sync.reports import process_report
+    from src.config.loader import ConfigLoader
+
+    config = ConfigLoader()
+    result = await process_report(
+        wcl=mock_wcl_relative,
+        report_code="test_shared",
+        config=config,
+    )
+
+    # Find fortitude_uptime entries for both priests
+    fort_entries = [u for u in result["utility"] if u["metric_name"] == "fortitude_uptime"]
+
+    priest_a = next((u for u in fort_entries if u["player_name"] == "PriestA"), None)
+    priest_b = next((u for u in fort_entries if u["player_name"] == "PriestB"), None)
+
+    assert priest_a is not None
+    assert priest_b is not None
+    # Both should have actual_value = 90.0 (raid-wide uptime)
+    assert priest_a["actual_value"] == pytest.approx(90.0, abs=0.1)
+    assert priest_b["actual_value"] == pytest.approx(90.0, abs=0.1)
+    # Score: 90/95 * 100 = 94.7
+    assert priest_a["score"] == pytest.approx(94.7, abs=0.1)
+    assert priest_b["score"] == pytest.approx(94.7, abs=0.1)

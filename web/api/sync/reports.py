@@ -161,7 +161,14 @@ async def process_report(
     player_specs = await wcl.get_report_player_specs(report_code)
 
     source_map = {p["name"]: p["id"] for p in players_raw}
+    source_to_player = {p["id"]: p["name"] for p in players_raw}
     consumables_profile = config.get_consumables()
+
+    # Build class -> [player_names] mapping for relative/shared_responsibility metrics
+    class_players: dict[str, list[str]] = {}
+    for pname, spec_key_raw in player_specs.items():
+        cls_name = spec_key_raw.split(":")[0].lower() if ":" in spec_key_raw else spec_key_raw.lower()
+        class_players.setdefault(cls_name, []).append(pname)
 
     # Fetch fights early so we can use per-fight windows for utility
     try:
@@ -175,6 +182,59 @@ async def process_report(
         if f.get("encounterID", 0) == 0:
             continue
         boss_fight_windows.append((f.get("startTime", 0), f.get("endTime", 0)))
+
+    # Pre-compute relative and shared_responsibility metrics (once per metric, not per player)
+    relative_cache: dict[str, dict[str, float]] = {}   # metric -> {player: score}
+    shared_cache: dict[str, float] = {}                  # metric -> uptime%
+
+    seen_metrics: set[str] = set()
+    for player in rankings_raw:
+        name = player["name"]
+        if name in player_specs:
+            sk = player_specs[name].lower()
+        else:
+            spec = player.get("spec", "")
+            cls = player_classes.get(name, player.get("class", ""))
+            sk = _validate_spec_key(cls, spec) if cls else None
+        sp = config.get_spec(sk) if sk else None
+        if not sp or not sp.get("contributions"):
+            continue
+        for c in sp["contributions"]:
+            metric = c["metric"]
+            if metric in seen_metrics:
+                continue
+            seen_metrics.add(metric)
+            if c["type"] == "relative":
+                resp_class = sk.split(":")[0] if sk and ":" in sk else ""
+                try:
+                    casts_data = await wcl.get_raid_casts_by_source(
+                        report_code, timerange["start"], timerange["end"], c,
+                    )
+                    scores_rel = compute_relative_scores(
+                        casts_data, source_to_player, class_players, resp_class, c,
+                    )
+                    relative_cache[metric] = scores_rel
+                except Exception:
+                    logger.warning("Failed relative metric %s in %s", metric, report_code)
+            elif c["type"] == "shared_responsibility":
+                resp_class = c.get("responsible_class", sk.split(":")[0] if sk and ":" in sk else "")
+                if boss_fight_windows:
+                    totals = []
+                    for f_start, f_end in boss_fight_windows:
+                        try:
+                            uptime = await wcl.get_raid_buff_uptime(report_code, f_start, f_end, c)
+                            totals.append(uptime)
+                        except Exception:
+                            pass
+                    shared_cache[metric] = sum(totals) / len(totals) if totals else 0.0
+                else:
+                    try:
+                        shared_cache[metric] = await wcl.get_raid_buff_uptime(
+                            report_code, timerange["start"], timerange["end"], c,
+                        )
+                    except Exception:
+                        logger.warning("Failed shared metric %s in %s", metric, report_code)
+                        shared_cache[metric] = 0.0
 
     rankings = []
     scores = []
@@ -204,9 +264,11 @@ async def process_report(
         utility_data = {}
         if spec_profile and spec_profile.get("contributions") and name in source_map:
             contribs = spec_profile["contributions"]
-            uptime_contribs = [c for c in contribs if c["type"] == "uptime"]
-            count_contribs = [c for c in contribs if c["type"] == "count"]
-            pull_check_contribs = [c for c in contribs if c["type"] == "pull_check"]
+            # Only fetch individual metrics via get_utility_data (skip relative/shared_responsibility)
+            individual_contribs = [c for c in contribs if c["type"] in ("uptime", "count", "pull_check")]
+            uptime_contribs = [c for c in individual_contribs if c["type"] == "uptime"]
+            count_contribs = [c for c in individual_contribs if c["type"] == "count"]
+            pull_check_contribs = [c for c in individual_contribs if c["type"] == "pull_check"]
 
             # Per-fight metrics (uptime + pull_check): calculate per boss fight and average
             per_fight_contribs = uptime_contribs + pull_check_contribs
@@ -250,8 +312,22 @@ async def process_report(
 
             for contrib in spec_profile.get("contributions", []):
                 metric = contrib["metric"]
-                actual = utility_data.get(metric, 0)
                 target = contrib["target"]
+
+                if contrib["type"] == "relative":
+                    # Use pre-computed relative scores
+                    rel_scores = relative_cache.get(metric, {})
+                    actual = rel_scores.get(name, 0.0)
+                elif contrib["type"] == "shared_responsibility":
+                    # Use pre-computed shared uptime
+                    actual = shared_cache.get(metric, 0.0)
+                else:
+                    # Individual metrics (uptime, count, pull_check) — from utility_data
+                    actual = utility_data.get(metric, 0)
+
+                # Also add to utility_data for score_player
+                utility_data[metric] = actual
+
                 metric_score = min(actual / target, 1.0) * 100 if target > 0 else 0
                 utility_entries.append({
                     "player_name": name,
