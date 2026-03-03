@@ -101,6 +101,7 @@ score = (utility_score × utility_weight) + (parse_percentile × parse_weight) +
 - `utility_score` = average of per-metric scores, each capped at 100
 - `consumables_score` = average of non-optional consumable metric scores, each capped at 100
 - Each metric score = `min(actual / target, 1.0) × 100`
+- Metric types: `uptime` (% of fight), `count` (casts), `relative` (peer-share of casts), `shared_responsibility` (class-wide buff/debuff uptime), `pull_check` (cast in first N seconds), `combo_presence` (flask/elixir check)
 - `consumables_weight` defaults to `0.00` on all specs — consumables are informational only until an officer raises it
 - Metrics with `optional: true` are shown in reports but never included in any score calculation (used for profession-gated items like Engineering explosives or LW drums, and situational items like Dark/Demonic Runes)
 - If a spec has no `contributions`, parse is the entire score (weights ignored)
@@ -129,16 +130,17 @@ warrior:protection:
       target: 15
 
 warrior:fury:
-  utility_weight: 0.30
-  parse_weight: 0.70
+  utility_weight: 0.40
+  parse_weight: 0.60
   consumables_weight: 0.00
   contributions:
     - metric: battle_shout_uptime
       label: "Battle Shout"
-      spell_id: 6673
-      type: uptime
-      subtype: buff      # IMPORTANT: queries Buffs table (not Debuffs)
-      target: 95
+      spell_ids: [6673, 469, 2048, 25289]
+      type: shared_responsibility   # class-wide buff — all warriors share score
+      subtype: buff                 # queries Buffs table (not Debuffs)
+      responsible_class: warrior
+      target: 85
 
 consumables:
   - metric: flask_uptime
@@ -160,6 +162,10 @@ consumables:
 **`spell_ids` list:** Use instead of `spell_id` when a metric can match any of several spell IDs (e.g. flasks, elixirs, drums). The API client checks `entry["id"] in spell_ids`.
 
 **`optional: true`:** Metric is displayed in reports but excluded from score calculations. Use for profession-gated items (Engineering, Leatherworking) and situational consumables (Dark/Demonic Runes).
+
+**`type: relative`:** For dispels/cleanses/purges — measures player's cast share vs class-peer expected share. Score = `min(player_share / expected_share, 1.0) × 100` where `expected_share = 1 / num_class_peers`. Queries Casts table once for the whole raid (no sourceID filter). Used by: `dispel_magic_count`, `cleanse_count`, `decurse_count`, `remove_curse_count`, `abolish_disease_count`, `abolish_poison_count`, `purge_count`.
+
+**`type: shared_responsibility`:** For class-wide buffs/debuffs (Fortitude, Faerie Fire, curses, Hunter's Mark, Battle Shout). Checks raid-wide uptime and applies the same score to ALL players of the `responsible_class`. Uses `responsible_class` field to identify which class is accountable. Uses `subtype: buff` to query Buffs table; otherwise queries Debuffs with `hostilityType=Enemies`.
 
 **`gear_check:` key:** A top-level key with gear validation thresholds. Used by `/gearcheck` and `/raidrecap` gear summary.
 
