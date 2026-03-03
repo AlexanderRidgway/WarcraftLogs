@@ -2,12 +2,13 @@ import asyncio
 import logging
 import os
 
-from fastapi import APIRouter, Depends, BackgroundTasks
+from fastapi import APIRouter, Depends, BackgroundTasks, Request
+from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from web.api.database import get_db, async_session
-from web.api.auth import get_current_officer
+from web.api.auth import get_current_officer, JWT_SECRET, JWT_ALGORITHM
 from web.api.models import SyncStatus, User
 
 router = APIRouter(prefix="/api/sync", tags=["sync"])
@@ -17,9 +18,29 @@ logger = logging.getLogger(__name__)
 # Simple lock to prevent concurrent syncs
 _sync_lock = asyncio.Lock()
 
+_optional_bearer = HTTPBearer(auto_error=False)
+
 
 @router.get("/status")
-async def sync_status(db: AsyncSession = Depends(get_db)):
+async def sync_status(
+    db: AsyncSession = Depends(get_db),
+    credentials: HTTPAuthorizationCredentials | None = Depends(_optional_bearer),
+):
+    # Only show error details to authenticated officers
+    is_officer = False
+    if credentials:
+        try:
+            import jwt
+            payload = jwt.decode(credentials.credentials, JWT_SECRET, algorithms=[JWT_ALGORITHM])
+            email = payload.get("sub")
+            if email:
+                result_user = await db.execute(select(User).where(User.email == email))
+                user = result_user.scalar_one_or_none()
+                if user and user.role == "officer":
+                    is_officer = True
+        except Exception:
+            pass
+
     result = await db.execute(select(SyncStatus))
     statuses = result.scalars().all()
     return [
@@ -28,7 +49,7 @@ async def sync_status(db: AsyncSession = Depends(get_db)):
             "last_run_at": s.last_run_at.isoformat() if s.last_run_at else None,
             "next_run_at": s.next_run_at.isoformat() if s.next_run_at else None,
             "status": s.status,
-            "error_message": s.error_message,
+            "error_message": s.error_message if is_officer else None,
         }
         for s in statuses
     ]

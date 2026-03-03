@@ -20,7 +20,14 @@ logger = logging.getLogger(__name__)
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 security = HTTPBearer(auto_error=False)
 
-JWT_SECRET = os.getenv("JWT_SECRET", "change-me-in-production")
+JWT_SECRET = os.getenv("JWT_SECRET", "")
+if not JWT_SECRET:
+    import warnings
+    warnings.warn(
+        "JWT_SECRET environment variable is not set. Using an insecure default for local development only.",
+        stacklevel=1,
+    )
+    JWT_SECRET = "local-dev-only-not-for-production"
 JWT_ALGORITHM = "HS256"
 JWT_EXPIRE_HOURS = 24
 
@@ -135,4 +142,6 @@ async def get_current_officer(
     user = result.scalar_one_or_none()
     if user is None:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="User not found")
+    if user.role != "officer":
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Officer role required")
     return user
