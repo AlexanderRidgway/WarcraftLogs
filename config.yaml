@@ -187,12 +187,11 @@ shaman:restoration:
   parse_weight: 0.50
   consumables_weight: 0.00
   contributions:
-    - metric: totem_uptime
+    - metric: totem_count
       label: "Totem (any)"
-      spell_ids: [25587, 25570, 3738, 30706, 25359, 25361, 25567, 25509, 16190]
-      type: uptime
-      subtype: buff
-      target: 90
+      spell_ids: [25587, 25570, 3738, 30706, 25359, 25361, 25528, 25567, 25509, 16190, 25552]
+      type: count
+      target: 5
     - metric: purge_count
       label: "Purge"
       spell_id: 370
@@ -204,24 +203,22 @@ shaman:elemental:
   parse_weight: 0.60
   consumables_weight: 0.00
   contributions:
-    - metric: totem_uptime
+    - metric: totem_count
       label: "Totem (any)"
-      spell_ids: [25587, 25570, 3738, 30706, 25359, 25361, 25567, 25509, 16190]
-      type: uptime
-      subtype: buff
-      target: 90
+      spell_ids: [25587, 25570, 3738, 30706, 25359, 25361, 25528, 25567, 25509, 16190, 25552]
+      type: count
+      target: 5
 
 shaman:enhancement:
   utility_weight: 0.45
   parse_weight: 0.55
   consumables_weight: 0.00
   contributions:
-    - metric: totem_uptime
+    - metric: totem_count
       label: "Totem (any)"
-      spell_ids: [25587, 25570, 3738, 30706, 25359, 25361, 25567, 25509, 16190]
-      type: uptime
-      subtype: buff
-      target: 90
+      spell_ids: [25587, 25570, 3738, 30706, 25359, 25361, 25528, 25567, 25509, 16190, 25552]
+      type: count
+      target: 5
 
 # ──────────────────────────────────────────────
 # DRUID
