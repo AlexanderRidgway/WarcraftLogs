@@ -1,8 +1,11 @@
 # Class:Spec profiles for scoring raiders.
 # utility_weight + parse_weight + consumables_weight must equal 1.0
 # consumables_weight: 0.00 = consumables shown as informational only (never scored)
-# metric types: "uptime" (% of fight) or "count" (number of casts/uses)
+# metric types: "uptime" (% of fight), "count" (number of casts/uses),
+#   "relative" (peer-share of casts), "shared_responsibility" (class-wide buff/debuff),
+#   "pull_check" (cast in first N seconds of boss pull)
 # subtype: "buff" queries WCL Buffs table; omit for Debuffs table
+# responsible_class: for shared_responsibility, which class is accountable
 # spell_id: single WCL spell ID; spell_ids: list of IDs (matches any one)
 # optional: true = shown in display but never included in score
 
@@ -36,12 +39,13 @@ warrior:fury:
   parse_weight: 0.60
   consumables_weight: 0.00
   contributions:
-    - metric: shout_count
-      label: "Shout (any)"
+    - metric: battle_shout_uptime
+      label: "Battle Shout"
       spell_ids: [6673, 469, 2048, 25289]
-      type: count
+      type: shared_responsibility
       subtype: buff
-      target: 3
+      responsible_class: warrior
+      target: 85
     - metric: demoralizing_shout_uptime
       label: "Demo Shout"
       spell_ids: [25203, 11556, 11555, 1160]
@@ -53,12 +57,13 @@ warrior:arms:
   parse_weight: 0.70
   consumables_weight: 0.00
   contributions:
-    - metric: shout_count
-      label: "Shout (any)"
+    - metric: battle_shout_uptime
+      label: "Battle Shout"
       spell_ids: [6673, 469, 2048, 25289]
-      type: count
+      type: shared_responsibility
       subtype: buff
-      target: 3
+      responsible_class: warrior
+      target: 85
     - metric: demoralizing_shout_uptime
       label: "Demo Shout"
       spell_ids: [25203, 11556, 11555, 1160]
@@ -77,8 +82,8 @@ paladin:holy:
     - metric: cleanse_count
       label: "Cleanse"
       spell_id: 4987
-      type: count
-      target: 10
+      type: relative
+      target: 100
     - metric: judgement_count
       label: "Judgement"
       spell_id: 20271
@@ -108,8 +113,8 @@ paladin:protection:
     - metric: cleanse_count
       label: "Cleanse"
       spell_id: 4987
-      type: count
-      target: 8
+      type: relative
+      target: 100
 
 paladin:retribution:
   utility_weight: 0.35
@@ -171,7 +176,8 @@ hunter:survival:
     - metric: hunters_mark_uptime
       label: "Hunter's Mark"
       spell_id: 14325
-      type: uptime
+      type: shared_responsibility
+      responsible_class: hunter
       target: 90
     - metric: misdirection_on_pull
       label: "Misdirection (Pull)"
@@ -197,8 +203,8 @@ shaman:restoration:
     - metric: purge_count
       label: "Purge"
       spell_id: 370
-      type: count
-      target: 5
+      type: relative
+      target: 100
 
 shaman:elemental:
   utility_weight: 0.40
@@ -240,7 +246,8 @@ druid:restoration:
     - metric: faerie_fire_uptime
       label: "Faerie Fire"
       spell_ids: [770, 16857]
-      type: uptime
+      type: shared_responsibility
+      responsible_class: druid
       target: 85
     - metric: innervate_count
       label: "Innervate"
@@ -250,13 +257,13 @@ druid:restoration:
     - metric: remove_curse_count
       label: "Remove Curse"
       spell_id: 2782
-      type: count
-      target: 5
+      type: relative
+      target: 100
     - metric: abolish_poison_count
       label: "Abolish Poison"
       spell_id: 2893
-      type: count
-      target: 5
+      type: relative
+      target: 100
 
 druid:balance:
   utility_weight: 0.30
@@ -271,8 +278,8 @@ druid:balance:
     - metric: remove_curse_count
       label: "Remove Curse"
       spell_id: 2782
-      type: count
-      target: 5
+      type: relative
+      target: 100
 
 # ──────────────────────────────────────────────
 # MAGE
@@ -286,8 +293,8 @@ mage:arcane:
     - metric: decurse_count
       label: "Remove Curse"
       spell_id: 475
-      type: count
-      target: 5
+      type: relative
+      target: 100
 
 mage:fire:
   utility_weight: 0.25
@@ -297,8 +304,8 @@ mage:fire:
     - metric: decurse_count
       label: "Remove Curse"
       spell_id: 475
-      type: count
-      target: 5
+      type: relative
+      target: 100
     - metric: fire_vulnerability_uptime
       label: "Fire Vulnerability (Imp. Scorch)"
       spell_id: 22959
@@ -314,22 +321,24 @@ warlock:affliction:
   parse_weight: 0.55
   consumables_weight: 0.00
   contributions:
-    - metric: curse_count
+    - metric: curse_uptime
       label: "Curse (any)"
       spell_ids: [27228, 27218, 30910, 27226, 11719, 30909]
-      type: count
-      target: 3
+      type: shared_responsibility
+      responsible_class: warlock
+      target: 85
 
 warlock:destruction:
   utility_weight: 0.30
   parse_weight: 0.70
   consumables_weight: 0.00
   contributions:
-    - metric: curse_count
+    - metric: curse_uptime
       label: "Curse (any)"
       spell_ids: [27228, 27218, 30910, 27226, 11719, 30909]
-      type: count
-      target: 3
+      type: shared_responsibility
+      responsible_class: warlock
+      target: 85
 
 # ──────────────────────────────────────────────
 # PRIEST
@@ -343,19 +352,20 @@ priest:holy:
     - metric: dispel_magic_count
       label: "Dispel Magic"
       spell_id: 527
-      type: count
-      target: 10
+      type: relative
+      target: 100
     - metric: fortitude_uptime
       label: "Power Word: Fortitude"
       spell_id: 25392
-      type: uptime
+      type: shared_responsibility
       subtype: buff
+      responsible_class: priest
       target: 95
     - metric: abolish_disease_count
       label: "Abolish Disease"
       spell_id: 552
-      type: count
-      target: 5
+      type: relative
+      target: 100
 
 priest:discipline:
   utility_weight: 0.40
@@ -365,19 +375,20 @@ priest:discipline:
     - metric: dispel_magic_count
       label: "Dispel Magic"
       spell_id: 527
-      type: count
-      target: 10
+      type: relative
+      target: 100
     - metric: fortitude_uptime
       label: "Power Word: Fortitude"
       spell_id: 25392
-      type: uptime
+      type: shared_responsibility
       subtype: buff
+      responsible_class: priest
       target: 95
     - metric: abolish_disease_count
       label: "Abolish Disease"
       spell_id: 552
-      type: count
-      target: 5
+      type: relative
+      target: 100
 
 priest:shadow:
   utility_weight: 0.35
