@@ -133,3 +133,82 @@ async def test_process_report_includes_fights_and_deaths(mock_wcl):
     assert len(result["deaths"]) == 1
     assert result["deaths"][0]["player_name"] == "Testplayer"
     assert len(result["fight_stats"]) == 2
+
+
+def test_compute_relative_scores_fair_share():
+    """Players who do their fair share get score 100."""
+    from web.api.sync.reports import compute_relative_scores
+
+    # 3 priests, each did 30 casts = equal share
+    casts_by_source = {1: 30, 2: 30, 3: 30}
+    source_to_player = {1: "PriestA", 2: "PriestB", 3: "PriestC"}
+    class_players = {"priest": ["PriestA", "PriestB", "PriestC"]}
+    contrib = {"metric": "dispel_magic_count", "spell_id": 527, "type": "relative", "target": 100}
+
+    result = compute_relative_scores(casts_by_source, source_to_player, class_players, "priest", contrib)
+
+    assert result["PriestA"] == pytest.approx(100.0, abs=0.1)
+    assert result["PriestB"] == pytest.approx(100.0, abs=0.1)
+    assert result["PriestC"] == pytest.approx(100.0, abs=0.1)
+
+
+def test_compute_relative_scores_uneven_share():
+    """Player below fair share gets proportional score."""
+    from web.api.sync.reports import compute_relative_scores
+
+    # 3 priests: A=40, B=30, C=20 (total=90, expected share=33.3%)
+    casts_by_source = {1: 40, 2: 30, 3: 20}
+    source_to_player = {1: "PriestA", 2: "PriestB", 3: "PriestC"}
+    class_players = {"priest": ["PriestA", "PriestB", "PriestC"]}
+    contrib = {"metric": "dispel_magic_count", "spell_id": 527, "type": "relative", "target": 100}
+
+    result = compute_relative_scores(casts_by_source, source_to_player, class_players, "priest", contrib)
+
+    # A: 40/90=44.4%, expected 33.3%, ratio=1.33 -> capped at 100
+    assert result["PriestA"] == pytest.approx(100.0, abs=0.1)
+    # B: 30/90=33.3%, expected 33.3%, ratio=1.0 -> 100
+    assert result["PriestB"] == pytest.approx(100.0, abs=0.1)
+    # C: 20/90=22.2%, expected 33.3%, ratio=0.667 -> 66.7
+    assert result["PriestC"] == pytest.approx(66.7, abs=0.1)
+
+
+def test_compute_relative_scores_solo_player():
+    """Solo player of class: 100 if they cast anything, 0 if not."""
+    from web.api.sync.reports import compute_relative_scores
+
+    casts_by_source = {1: 5}
+    source_to_player = {1: "SoloPriest"}
+    class_players = {"priest": ["SoloPriest"]}
+    contrib = {"metric": "dispel_magic_count", "spell_id": 527, "type": "relative", "target": 100}
+
+    result = compute_relative_scores(casts_by_source, source_to_player, class_players, "priest", contrib)
+    assert result["SoloPriest"] == pytest.approx(100.0, abs=0.1)
+
+
+def test_compute_relative_scores_zero_casts():
+    """Zero total casts: all players score 0."""
+    from web.api.sync.reports import compute_relative_scores
+
+    casts_by_source = {}
+    source_to_player = {1: "PriestA", 2: "PriestB"}
+    class_players = {"priest": ["PriestA", "PriestB"]}
+    contrib = {"metric": "dispel_magic_count", "spell_id": 527, "type": "relative", "target": 100}
+
+    result = compute_relative_scores(casts_by_source, source_to_player, class_players, "priest", contrib)
+    assert result["PriestA"] == 0.0
+    assert result["PriestB"] == 0.0
+
+
+def test_compute_relative_scores_player_zero_others_cast():
+    """Player with 0 casts when others cast gets 0."""
+    from web.api.sync.reports import compute_relative_scores
+
+    casts_by_source = {1: 20, 2: 10}  # source 3 not present = 0 casts
+    source_to_player = {1: "PriestA", 2: "PriestB", 3: "PriestC"}
+    class_players = {"priest": ["PriestA", "PriestB", "PriestC"]}
+    contrib = {"metric": "dispel_magic_count", "spell_id": 527, "type": "relative", "target": 100}
+
+    result = compute_relative_scores(casts_by_source, source_to_player, class_players, "priest", contrib)
+    assert result["PriestC"] == 0.0
+    # A: 20/30=66.7%, expected 33.3%, ratio=2.0 -> capped at 100
+    assert result["PriestA"] == pytest.approx(100.0, abs=0.1)

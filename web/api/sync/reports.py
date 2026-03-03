@@ -44,6 +44,58 @@ def _validate_spec_key(cls: str, spec: str) -> str:
     return cls_lower
 
 
+def compute_relative_scores(
+    casts_by_source: dict[int, int],
+    source_to_player: dict[int, str],
+    class_players: dict[str, list[str]],
+    responsible_class: str,
+    contrib: dict,
+) -> dict[str, float]:
+    """Compute peer-relative scores for a dispel/utility metric.
+
+    Each player is scored on their share of total class-peer casts vs expected share.
+    Score = min(player_share / expected_share, 1.0) * 100
+
+    Args:
+        casts_by_source: {source_id: cast_count} from get_raid_casts_by_source
+        source_to_player: {source_id: player_name} for all players in the raid
+        class_players: {class_name: [player_names]} grouping
+        responsible_class: which class is responsible for this metric
+        contrib: the contribution config entry
+
+    Returns: {player_name: score} for all players of the responsible class
+    """
+    peers = class_players.get(responsible_class, [])
+    if not peers:
+        return {}
+
+    # Map player names to their cast counts
+    player_to_source = {}
+    for sid, name in source_to_player.items():
+        if name in peers:
+            player_to_source[name] = sid
+
+    # Sum total casts from class peers only
+    total_casts = 0
+    player_casts: dict[str, int] = {}
+    for name in peers:
+        sid = player_to_source.get(name)
+        count = casts_by_source.get(sid, 0) if sid is not None else 0
+        player_casts[name] = count
+        total_casts += count
+
+    if total_casts == 0:
+        return {name: 0.0 for name in peers}
+
+    expected_share = 1.0 / len(peers)
+    result = {}
+    for name in peers:
+        player_share = player_casts[name] / total_casts
+        ratio = player_share / expected_share
+        result[name] = min(ratio, 1.0) * 100
+    return result
+
+
 async def fetch_new_reports(
     wcl: WarcraftLogsClient,
     guild_name: str,
