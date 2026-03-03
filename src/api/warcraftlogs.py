@@ -231,7 +231,13 @@ class WarcraftLogsClient:
             total_time = 1
 
             if debuff_contribs:
-                debuff_data = await self._query_table(report_code, source_id, start, end, "Debuffs")
+                # Enemy debuffs (Expose Armor, Sunder, etc.) must use hostilityType=Enemies
+                # and no sourceID — WCL's Debuffs table with sourceID returns debuffs ON the
+                # player, not debuffs applied BY the player to enemies.
+                debuff_data = await self._query_table(
+                    report_code, None, start, end, "Debuffs",
+                    hostility_type="Enemies",
+                )
                 all_auras += debuff_data.get("auras", [])
                 total_time = debuff_data.get("totalTime", 1)
 
@@ -292,24 +298,47 @@ class WarcraftLogsClient:
         return 0.0
 
     async def _query_table(
-        self, report_code: str, source_id: int, start: int, end: int, data_type: str
+        self, report_code: str, source_id: int, start: int, end: int, data_type: str,
+        hostility_type: str | None = None,
     ) -> dict:
-        gql = """
-        query($code: String!, $sourceID: Int, $startTime: Float!, $endTime: Float!, $dataType: TableDataType!) {
-          reportData {
-            report(code: $code) {
-              table(sourceID: $sourceID, startTime: $startTime, endTime: $endTime, dataType: $dataType)
+        if hostility_type:
+            gql = """
+            query($code: String!, $sourceID: Int, $startTime: Float!, $endTime: Float!,
+                  $dataType: TableDataType!, $hostilityType: HostilityType!) {
+              reportData {
+                report(code: $code) {
+                  table(sourceID: $sourceID, startTime: $startTime, endTime: $endTime,
+                        dataType: $dataType, hostilityType: $hostilityType)
+                }
+              }
             }
-          }
-        }
-        """
-        result = await self.query(gql, {
-            "code": report_code,
-            "sourceID": source_id,
-            "startTime": float(start),
-            "endTime": float(end),
-            "dataType": data_type,
-        })
+            """
+            variables = {
+                "code": report_code,
+                "sourceID": source_id,
+                "startTime": float(start),
+                "endTime": float(end),
+                "dataType": data_type,
+                "hostilityType": hostility_type,
+            }
+        else:
+            gql = """
+            query($code: String!, $sourceID: Int, $startTime: Float!, $endTime: Float!, $dataType: TableDataType!) {
+              reportData {
+                report(code: $code) {
+                  table(sourceID: $sourceID, startTime: $startTime, endTime: $endTime, dataType: $dataType)
+                }
+              }
+            }
+            """
+            variables = {
+                "code": report_code,
+                "sourceID": source_id,
+                "startTime": float(start),
+                "endTime": float(end),
+                "dataType": data_type,
+            }
+        result = await self.query(gql, variables)
         report = result["data"]["reportData"]["report"]
         if report is None:
             raise ValueError(f"Report '{report_code}' not found on WarcraftLogs")
