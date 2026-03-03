@@ -60,7 +60,7 @@ jobs:
             --instance-ids "$INSTANCE_ID" \
             --document-name "AWS-RunShellScript" \
             --parameters "commands=[
-              'cd /opt/crankguild',
+              'cd /usr/bin',
               'aws ecr get-login-password --region ${{ secrets.AWS_REGION }} | docker login --username AWS --password-stdin $ECR_REGISTRY',
               'aws s3 cp s3://${{ secrets.CONFIG_S3_BUCKET }}/deploy/docker-compose.prod.yml docker-compose.prod.yml',
               'mkdir -p web',
